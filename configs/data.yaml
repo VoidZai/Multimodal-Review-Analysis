@@ -10,8 +10,17 @@ paths:
   processed_dir: data/processed
   reviews_raw: data/raw/reviews_clothing.jsonl.gz
   metadata_raw: data/raw/meta_clothing.jsonl.gz
+  raw_checksums: data/raw/checksums.json
   corpus_out: data/processed/corpus_v1.parquet
   manifest_out: data/processed/corpus_v1_manifest.json
+
+source:
+  # Amazon Reviews 2023 (Hou et al., "Bridging Language and Items for
+  # Retrieval and Recommendation", 2024) — McAuley Lab, UC San Diego.
+  # https://amazon-reviews-2023.github.io/
+  reviews_url: "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/raw/review_categories/Clothing_Shoes_and_Jewelry.jsonl.gz"
+  metadata_url: "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/raw/meta_categories/meta_Clothing_Shoes_and_Jewelry.jsonl.gz"
+  citation: "Hou, Y. et al. (2024). Bridging Language and Items for Retrieval and Recommendation. arXiv:2403.03952."
 
 filters:
   language: en
