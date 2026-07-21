@@ -50,6 +50,8 @@ from pathlib import Path
 from typing import Any, Iterator
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from cragb.data.clean import dedup, drop_empty_text, filter_language, normalize_whitespace
 from cragb.data.features import add_review_features, has_image
@@ -240,7 +242,17 @@ def build_corpus(config_path: str | Path) -> dict[str, Any]:
 
     corpus_out = resolve_path(cfg["paths"]["corpus_out"])
     corpus_out.parent.mkdir(parents=True, exist_ok=True)
-    corpus.to_parquet(corpus_out, index=False)
+    # Written via pyarrow directly (not `DataFrame.to_parquet`'s defaults)
+    # with a single row group: pyarrow's default multi-row-group chunking
+    # for a frame this size was empirically found to produce *different*
+    # file bytes across separate process launches (same logical data,
+    # different physical layout) even with a fixed seed elsewhere in the
+    # pipeline — verified by writing the same DataFrame from fresh Python
+    # processes and diffing SHA-256. Forcing one row group made repeated
+    # fresh-process writes byte-identical. Reproducibility here means the
+    # frozen artifact's hash, not just its row count, so this matters.
+    table = pa.Table.from_pandas(corpus, preserve_index=False)
+    pq.write_table(table, corpus_out, row_group_size=len(corpus))
 
     manifest = {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
