@@ -8,6 +8,7 @@ launched from.
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -48,3 +49,25 @@ def resolve_path(path: str | Path) -> Path:
     """
     p = Path(path)
     return p if p.is_absolute() else (REPO_ROOT / p)
+
+
+def sha256_file(path: str | Path, chunk_size: int = 1024 * 1024) -> str:
+    """Compute the SHA-256 hex digest of a file via a streamed read.
+
+    Used for manifest generation (e.g. `corpus_v1_manifest.json`), so a
+    frozen artifact's integrity can be independently re-verified later
+    without ever holding the whole file in memory.
+
+    Args:
+        path: file to hash, absolute or relative to the repo root.
+        chunk_size: bytes read per iteration.
+
+    Returns:
+        Lowercase hex-encoded SHA-256 digest.
+    """
+    resolved = resolve_path(path)
+    digest = hashlib.sha256()
+    with resolved.open("rb") as f:
+        for block in iter(lambda: f.read(chunk_size), b""):
+            digest.update(block)
+    return digest.hexdigest()

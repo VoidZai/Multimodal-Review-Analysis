@@ -29,6 +29,8 @@ filters:
 
 sampling:
   target_size: 200000        # rows in corpus_v1 (low hundreds of thousands)
+  chunk_size: 20000           # rows read per streamed chunk while collecting candidates
+  overcollect_factor: 1.5     # per-stratum candidate buffer above target, to absorb clean-time drops
   strata:
     rating:
       # forced minimum share so 1-2 star (defect/fit) questions have evidence
@@ -38,3 +40,15 @@ sampling:
     has_image:
       true: 0.15
       false: 0.85
+
+corpus:
+  # Final corpus_v1 columns. Kept lean deliberately: raw nested `images`
+  # (review) / `videos`,`description`,`details`,`bought_together` (product)
+  # are dropped from corpus_v1 as noise once `image_urls`/`n_images`/
+  # `has_image` (T1.6) are derived — they add nested-object parquet
+  # complexity for no EDA/retrieval value at this stage.
+  review_columns:
+    [rating, title, text, asin, parent_asin, user_id, timestamp, helpful_vote,
+     verified_purchase, rating_bucket, has_image, n_images, image_urls, token_len]
+  metadata_columns:
+    [parent_asin, title, main_category, categories, store, average_rating, price]
