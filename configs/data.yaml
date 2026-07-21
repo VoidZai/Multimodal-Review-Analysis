@@ -1,0 +1,31 @@
+# Data pipeline configuration for CRAGB (Milestone M1).
+# Every knob a data-processing script needs should live here — no magic
+# numbers in src/. Later tasks (T1.2 onward) will read this file; T1.1 only
+# establishes its shape and defaults.
+
+seed: 42
+
+paths:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  reviews_raw: data/raw/reviews_clothing.jsonl.gz
+  metadata_raw: data/raw/meta_clothing.jsonl.gz
+  corpus_out: data/processed/corpus_v1.parquet
+  manifest_out: data/processed/corpus_v1_manifest.json
+
+filters:
+  language: en
+  min_text_chars: 5          # drop empty/near-empty review text
+  dedup_on: [user_id, parent_asin, text]
+
+sampling:
+  target_size: 200000        # rows in corpus_v1 (low hundreds of thousands)
+  strata:
+    rating:
+      # forced minimum share so 1-2 star (defect/fit) questions have evidence
+      "1-2": 0.20
+      "3": 0.15
+      "4-5": 0.65
+    has_image:
+      true: 0.15
+      false: 0.85

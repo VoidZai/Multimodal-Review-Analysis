@@ -1,0 +1,17 @@
+name: cragb
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pandas=2.2.*
+  - pyarrow=16.*
+  - numpy=1.26.*
+  - pyyaml=6.*
+  - tqdm=4.*
+  - matplotlib=3.9.*
+  - jupyter=1.*
+  - pytest=8.*
+  - pip
+  - pip:
+      - langdetect==1.0.9

@@ -1,0 +1,26 @@
+# Data — large, non-deterministic to re-download; tracked via manifests/hashes instead
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/README.md
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/*_manifest.json
+!data/processed/*_datasheet.md
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
