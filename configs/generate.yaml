@@ -1,0 +1,44 @@
+# LLM-based CRAGB candidate-question drafting configuration (T2.2;
+# PLAN.md §3 E1, §9 "Benchmark-generation prompt").
+#
+# Draft questions are generated *from* sampled corpus reviews (grounding
+# context per category), not from imagination, then over-generated so
+# T2.3's human curation has real material to select and rebalance from
+# rather than accepting everything the model produces.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+  taxonomy_config: configs/taxonomy.yaml
+  prompt_template: src/cragb/generate/prompts/benchmark_gen.md
+  draft_out: benchmark/cragb_draft.jsonl
+  # API responses are cached here keyed on the full request payload, so a
+  # re-run (e.g. after a crash, or to add one more category) does not
+  # re-spend free-tier quota on prompts already answered (PLAN.md §5,
+  # §1.4 bottleneck #3).
+  cache_dir: results/cache/api
+
+provider:
+  name: groq
+  model: llama-3.1-8b-instant
+  api_base: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  temperature: 0.7
+  max_tokens: 1500
+  timeout_s: 30
+  max_retries: 5
+
+sampling:
+  # review snippets shown to the LLM as grounding context, per category
+  reviews_per_category: 8
+  # truncate long reviews so the prompt stays small and cheap
+  max_review_chars: 400
+  # draft more than target_count per category (T2.1) so T2.3 has room to
+  # reject weak drafts and still land close to target
+  overgenerate_factor: 1.5
+
+dedup:
+  # difflib SequenceMatcher ratio above which two drafted questions in
+  # the same category are treated as near-duplicates and one is dropped
+  near_duplicate_threshold: 0.9

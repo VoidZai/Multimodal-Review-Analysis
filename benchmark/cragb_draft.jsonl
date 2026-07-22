@@ -1,0 +1,90 @@
+{"id": "fit_sizing_000", "category": "fit_sizing", "question": "Do these pants run true to size?", "rationale": "Fit and sizing accuracy"}
+{"id": "fit_sizing_001", "category": "fit_sizing", "question": "Are they loose or tight?", "rationale": "Fit description and comfort"}
+{"id": "fit_sizing_002", "category": "fit_sizing", "question": "Do they stretch after wear?", "rationale": "Fabric and fit flexibility"}
+{"id": "fit_sizing_003", "category": "fit_sizing", "question": "How do they fit on the legs?", "rationale": "Length and proportion"}
+{"id": "fit_sizing_004", "category": "fit_sizing", "question": "Are they comfortable to wear?", "rationale": "Comfort and wearability"}
+{"id": "fit_sizing_005", "category": "fit_sizing", "question": "Do they have a generous fit?", "rationale": "Fit and looseness"}
+{"id": "fit_sizing_006", "category": "fit_sizing", "question": "Are they suitable for casual wear?", "rationale": "Occasion and style"}
+{"id": "fit_sizing_007", "category": "fit_sizing", "question": "How do they compare to regular hoodies in terms of fit?", "rationale": "Comparison and fit"}
+{"id": "fit_sizing_008", "category": "fit_sizing", "question": "Do they have a flattering fit?", "rationale": "Style and appearance"}
+{"id": "fit_sizing_009", "category": "fit_sizing", "question": "Are they suitable for work?", "rationale": "Occasion and professional attire"}
+{"id": "fit_sizing_010", "category": "fit_sizing", "question": "Do they have any noticeable flaws in the fit?", "rationale": "Fit and quality"}
+{"id": "fit_sizing_011", "category": "fit_sizing", "question": "How do they fit in the waistband and rear?", "rationale": "Proportion and fit"}
+{"id": "fit_sizing_012", "category": "fit_sizing", "question": "Are they suitable for tall people?", "rationale": "Fit and proportion for different body types"}
+{"id": "fit_sizing_013", "category": "fit_sizing", "question": "Do they have a classic five-pocket styling?", "rationale": "Style and design"}
+{"id": "fit_sizing_014", "category": "fit_sizing", "question": "How do they look compared to other similar products?", "rationale": "Comparison and style"}
+{"id": "fit_sizing_015", "category": "fit_sizing", "question": "Are they easy to care for?", "rationale": "Maintenance and upkeep"}
+{"id": "fit_sizing_016", "category": "fit_sizing", "question": "Do they have a slim fit?", "rationale": "Style and fit"}
+{"id": "fit_sizing_017", "category": "fit_sizing", "question": "How do they fit on people with a petite frame?", "rationale": "Fit and proportion for different body types"}
+{"id": "colour_appearance_000", "category": "colour_appearance", "question": "Is the product's color consistent across different angles?", "rationale": "Matches the category of color appearance"}
+{"id": "colour_appearance_001", "category": "colour_appearance", "question": "How accurate is the product's color representation on the listing photo?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_002", "category": "colour_appearance", "question": "Do many customers comment on the color being lighter or darker than expected?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_003", "category": "colour_appearance", "question": "Can you find any reviews mentioning a color difference between the product and the listing photo?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_004", "category": "colour_appearance", "question": "Is the product's color appearance a common point of discussion among reviewers?", "rationale": "Matches the category of color appearance"}
+{"id": "colour_appearance_005", "category": "colour_appearance", "question": "Do reviewers mention any issues with the color of the product?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_006", "category": "colour_appearance", "question": "Are there any reviews that discuss how the product's color changes in different lighting conditions?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_007", "category": "colour_appearance", "question": "Can you find any reviews mentioning a specific color that is not as expected?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_008", "category": "colour_appearance", "question": "How often do reviewers comment on the color being a surprise or pleasant discovery?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_009", "category": "colour_appearance", "question": "Are there any reviews that discuss how the product's color compares to other similar products?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_010", "category": "colour_appearance", "question": "Do reviewers mention any issues with the color being uneven or inconsistent?", "rationale": "Requires reading review text"}
+{"id": "colour_appearance_011", "category": "colour_appearance", "question": "Can you find any reviews mentioning a color that is more vibrant or muted than expected?", "rationale": "Requires reading review text"}
+{"id": "fabric_quality_000", "category": "fabric_quality", "question": "Is the fabric used in this product prone to snagging or running?", "rationale": "Fabric durability and quality"}
+{"id": "fabric_quality_001", "category": "fabric_quality", "question": "How does the softness of the fabric compare to other similar products?", "rationale": "Fabric texture and comfort"}
+{"id": "fabric_quality_002", "category": "fabric_quality", "question": "Can the material be stretched or does it lose its shape easily?", "rationale": "Fabric elasticity and resilience"}
+{"id": "fabric_quality_003", "category": "fabric_quality", "question": "Does the construction of the product feel solid and well-made?", "rationale": "Product build quality and construction"}
+{"id": "fabric_quality_004", "category": "fabric_quality", "question": "Are the seams and stitching on the product secure and even?", "rationale": "Product build quality and construction"}
+{"id": "fabric_quality_005", "category": "fabric_quality", "question": "Is the fabric breathable and moisture-wicking?", "rationale": "Fabric performance and comfort"}
+{"id": "fabric_quality_006", "category": "fabric_quality", "question": "How does the color of the fabric hold up to repeated washing and wear?", "rationale": "Fabric colorfastness and durability"}
+{"id": "fabric_quality_007", "category": "fabric_quality", "question": "Does the material feel warm or cold to the touch?", "rationale": "Fabric texture and temperature regulation"}
+{"id": "fabric_quality_008", "category": "fabric_quality", "question": "Can the product be easily machine washed and dried without damaging the fabric?", "rationale": "Fabric care and maintenance"}
+{"id": "fabric_quality_009", "category": "fabric_quality", "question": "Are there any signs of pilling or fraying on the edges of the fabric?", "rationale": "Fabric durability and quality"}
+{"id": "fabric_quality_010", "category": "fabric_quality", "question": "How does the weight of the fabric feel against the skin?", "rationale": "Fabric texture and comfort"}
+{"id": "fabric_quality_011", "category": "fabric_quality", "question": "Can the material be easily ironed or does it wrinkle easily?", "rationale": "Fabric care and maintenance"}
+{"id": "fabric_quality_012", "category": "fabric_quality", "question": "Is the fabric prone to fading or discoloration in sunlight?", "rationale": "Fabric colorfastness and durability"}
+{"id": "fabric_quality_013", "category": "fabric_quality", "question": "Does the construction of the product allow for a full range of motion?", "rationale": "Product design and comfort"}
+{"id": "fabric_quality_014", "category": "fabric_quality", "question": "Are there any noticeable odors or chemical smells associated with the fabric?", "rationale": "Fabric safety and comfort"}
+{"id": "durability_000", "category": "durability", "question": "Do these overalls fall apart easily after repeated wear?", "rationale": "Durability after wear and tear"}
+{"id": "durability_001", "category": "durability", "question": "Will this product last a long time if I use it regularly?", "rationale": "Long-term durability and reliability"}
+{"id": "durability_002", "category": "durability", "question": "Can you expect these socks to stay in good condition after multiple washes?", "rationale": "Durability of clothing after repeated washing"}
+{"id": "durability_003", "category": "durability", "question": "How well do these products hold up against scratches and scuffs?", "rationale": "Resistance to damage and wear"}
+{"id": "durability_004", "category": "durability", "question": "Are the materials used in this product prone to fraying or tearing?", "rationale": "Material durability and tendency to fray"}
+{"id": "durability_005", "category": "durability", "question": "Do these products show signs of wear and tear after a short period of use?", "rationale": "Visible signs of wear and tear"}
+{"id": "durability_006", "category": "durability", "question": "Can you recommend these products for someone who needs something that will last a long time?", "rationale": "Suitability for long-term use"}
+{"id": "durability_007", "category": "durability", "question": "How well do these products hold up against water and moisture?", "rationale": "Water resistance and durability"}
+{"id": "durability_008", "category": "durability", "question": "Are the seams on these products securely stitched or prone to coming undone?", "rationale": "Seam durability and tendency to come undone"}
+{"id": "durability_009", "category": "durability", "question": "Do these products require frequent repairs or maintenance?", "rationale": "Need for frequent repairs"}
+{"id": "durability_010", "category": "durability", "question": "Can you expect these products to retain their shape and structure after repeated use?", "rationale": "Retaining shape and structure"}
+{"id": "durability_011", "category": "durability", "question": "How well do these products hold up in extreme temperatures or weather conditions?", "rationale": "Durability in extreme conditions"}
+{"id": "defects_000", "category": "defects", "question": "Do buyers mention any issues with the quality of stitching?", "rationale": "This question requires reading reviews to find mentions of stitching problems."}
+{"id": "defects_001", "category": "defects", "question": "How common are reports of damage or defects upon arrival?", "rationale": "This question fits the category because it's about defects and damage, which can be found in review text."}
+{"id": "defects_002", "category": "defects", "question": "Are there any complaints about loose threads or seams on the product?", "rationale": "This question requires reading reviews to find mentions of loose threads or seams."}
+{"id": "defects_003", "category": "defects", "question": "Do buyers mention any problems with the workmanship of the product?", "rationale": "This question fits the category because it's about workmanship issues, which can be found in review text."}
+{"id": "defects_004", "category": "defects", "question": "How often do reviewers mention issues with fit, such as sizing problems or snugness?", "rationale": "This question requires reading reviews to find mentions of fit issues."}
+{"id": "defects_005", "category": "defects", "question": "Are there any complaints about defects or damage to the packaging?", "rationale": "This question fits the category because it's about defects and damage, which can be found in review text."}
+{"id": "defects_006", "category": "defects", "question": "Do buyers mention any problems with the durability of the product?", "rationale": "This question requires reading reviews to find mentions of durability issues."}
+{"id": "defects_007", "category": "defects", "question": "How common are reports of missing parts or accessories upon arrival?", "rationale": "This question fits the category because it's about defects and damage, which can be found in review text."}
+{"id": "defects_008", "category": "defects", "question": "Are there any complaints about loose or uneven stitching on the product?", "rationale": "This question requires reading reviews to find mentions of stitching problems."}
+{"id": "defects_009", "category": "defects", "question": "Do buyers mention any issues with the quality of materials used in the product?", "rationale": "This question fits the category because it's about quality issues, which can be found in review text."}
+{"id": "defects_010", "category": "defects", "question": "How often do reviewers mention problems with assembly or construction of the product?", "rationale": "This question requires reading reviews to find mentions of assembly or construction issues."}
+{"id": "defects_011", "category": "defects", "question": "Are there any complaints about defects or damage to the product's finish or coating?", "rationale": "This question fits the category because it's about defects and damage, which can be found in review text."}
+{"id": "occasion_000", "category": "occasion", "question": "Is this suitable for everyday wear?", "rationale": "Suitability for daily occasions"}
+{"id": "occasion_001", "category": "occasion", "question": "Are these shoes good for work or formal events?", "rationale": "Occasion-specific use"}
+{"id": "occasion_002", "category": "occasion", "question": "Would I look good wearing this to a party?", "rationale": "Occasion-specific style"}
+{"id": "occasion_003", "category": "occasion", "question": "Can I wear this in cold weather?", "rationale": "Weather appropriateness"}
+{"id": "occasion_004", "category": "occasion", "question": "Is this dress suitable for a formal occasion?", "rationale": "Formal event suitability"}
+{"id": "occasion_005", "category": "occasion", "question": "Would I be comfortable wearing this to the beach?", "rationale": "Beachwear suitability"}
+{"id": "occasion_006", "category": "occasion", "question": "Is this jacket suitable for hiking?", "rationale": "Outdoor activity appropriateness"}
+{"id": "occasion_007", "category": "occasion", "question": "Can I wear this to a casual BBQ?", "rationale": "Casual event suitability"}
+{"id": "occasion_008", "category": "occasion", "question": "Is this watch suitable for formal business wear?", "rationale": "Formal business wear suitability"}
+{"id": "occasion_009", "category": "occasion", "question": "Would I be able to wear this to a wedding?", "rationale": "Wedding guest style"}
+{"id": "occasion_010", "category": "occasion", "question": "Is this suitable for hot summer days?", "rationale": "Summer weather appropriateness"}
+{"id": "occasion_011", "category": "occasion", "question": "Can I wear this to a formal dinner?", "rationale": "Formal dinner suitability"}
+{"id": "value_000", "category": "value", "question": "Are these socks worth the extra cost?", "rationale": "Value for money"}
+{"id": "value_001", "category": "value", "question": "Do buyers think this item is overpriced?", "rationale": "Perceived value"}
+{"id": "value_002", "category": "value", "question": "Is the quality of this product consistent with its price?", "rationale": "Price vs quality"}
+{"id": "value_003", "category": "value", "question": "Are shoppers getting a good deal on this item?", "rationale": "Value compared to alternatives"}
+{"id": "value_004", "category": "value", "question": "Do customers feel like this product is a good investment?", "rationale": "Long-term value"}
+{"id": "value_005", "category": "value", "question": "Is the price of this product reasonable for its features?", "rationale": "Price for features"}
+{"id": "value_006", "category": "value", "question": "Do buyers think this item is a good value for the price?", "rationale": "Perceived value"}
+{"id": "value_007", "category": "value", "question": "Is the quality of this product worth the cost?", "rationale": "Price vs quality"}
+{"id": "value_008", "category": "value", "question": "Do shoppers feel like they're getting a good value out of this product?", "rationale": "Overall value"}

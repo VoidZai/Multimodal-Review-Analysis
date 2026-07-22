@@ -16,6 +16,10 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
+# Disk-cached API responses (regenerable; PLAN.md §5 caches for
+# reproducibility/quota safety, not for committing to git)
+results/cache/
+
 # Environments
 .venv/
 venv/
