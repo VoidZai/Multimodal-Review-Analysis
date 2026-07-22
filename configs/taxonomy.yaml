@@ -1,0 +1,78 @@
+# CRAGB question taxonomy configuration (T2.1; PLAN.md §3 E1, M2.md T2.1).
+#
+# Category keyword lists live in code (src/cragb/bench/taxonomy.py), not
+# here, following the precedent set by T1.11's ATTRIBUTE_KEYWORDS in
+# src/cragb/data/vocab_check.py: small curated word lists are easier to
+# review as code (with inline comments on *why* each term is included)
+# than as YAML string arrays. This file holds the knobs that are
+# legitimately parameters — target counts, negative quotas, and the
+# coverage threshold used to flag an under-supported category — so the
+# taxonomy's *shape* can change without touching Python.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+  taxonomy_out: benchmark/taxonomy.md
+
+validation:
+  # cragb_v1 targets ~60 questions total (PLAN.md §1.4 bottleneck #2:
+  # ~60 done well beats 100 done shallowly).
+  expected_total: 60
+  total_tolerance: 5
+  # a category below this % corpus coverage is flagged as under-supported;
+  # mirrors T1.11's ">1% of reviews" bar for attribute-vocabulary coverage.
+  min_coverage_pct: 1.0
+  # a category below this % is a hard failure, not just a flag — signals
+  # the corpus effectively has no evidence for the category at all.
+  min_coverage_pct_hard_floor: 0.05
+
+categories:
+  - name: fit_sizing
+    description: >-
+      Does the item run true to size, and how does it fit (loose, tight,
+      length, etc.)? E.g. "does this run small?"
+    target_count: 12
+    negative_count: 2
+
+  - name: colour_appearance
+    description: >-
+      Does the colour/appearance match the listing photos? E.g. "is the
+      colour as pictured?"
+    target_count: 8
+    negative_count: 1
+
+  - name: fabric_quality
+    description: >-
+      What is the fabric/material like, and is construction quality good?
+      E.g. "is the fabric itchy or scratchy?"
+    target_count: 10
+    negative_count: 2
+
+  - name: durability
+    description: >-
+      Does the item hold up over repeated wear/washing? E.g. "does this
+      fall apart after a few washes?"
+    target_count: 8
+    negative_count: 2
+
+  - name: defects
+    description: >-
+      Do buyers report defects, damage, or missing parts on arrival?
+      E.g. "do buyers report loose stitching?"
+    target_count: 8
+    negative_count: 2
+
+  - name: occasion
+    description: >-
+      Is the item suitable for a specific occasion or use context? E.g.
+      "is this appropriate for a wedding?"
+    target_count: 8
+    negative_count: 1
+
+  - name: value
+    description: >-
+      Do buyers feel the item is worth its price? E.g. "do buyers think
+      this is overpriced?"
+    target_count: 6
+    negative_count: 1
