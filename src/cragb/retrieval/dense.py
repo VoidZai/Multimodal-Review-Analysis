@@ -135,7 +135,7 @@ class DenseRetriever(Retriever):
 
         model = self._get_model()
         query_embedding = model.encode(
-            [query], normalize_embeddings=True, convert_to_numpy=True
+            [query], show_progress_bar=False, normalize_embeddings=True, convert_to_numpy=True
         ).astype(np.float32)
 
         k_eff = min(k, self._index.ntotal)

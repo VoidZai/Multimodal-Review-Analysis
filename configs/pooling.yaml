@@ -1,0 +1,38 @@
+# CRAGB pooling configuration (T2.6; PLAN.md §3 E1, §1.4 risk A).
+#
+# Pooling is the TREC remedy for incomplete relevance judgments: for
+# each question, take the UNION of top-k results from every retriever
+# under study, and only ask a human to judge that pool (T2.7) — labels
+# are then complete *with respect to the systems being compared*, even
+# though nobody hand-labeled the full ~200k-row corpus_v1.
+
+seed: 42
+
+paths:
+  questions_in: benchmark/cragb_questions_v1.jsonl
+  corpus_in: data/processed/corpus_v1.parquet
+  pools_out: benchmark/pools_v1.jsonl
+
+corpus:
+  text_col: text
+
+pooling:
+  # Querying once at max(k_values) and checking `hit.rank <= k` for each
+  # smaller k is equivalent to (and cheaper than) re-querying at every k
+  # separately — a retriever's top-k is always a prefix of its
+  # top-(k_max) for the same query.
+  k_values: [5, 10]
+  # With 2 retrievers at k_max=10, a pool's size is mathematically
+  # bounded in [10, 20]: it can never be empty (each retriever always
+  # returns its k highest-scoring documents, relevant or not — that's
+  # what "pooling", not "filtering", means), and it hits the floor of
+  # exactly k_max only when both retrievers return the *identical*
+  # top-10, i.e. zero added diversity from running a second retriever at
+  # all. That floor case — not an empty pool — is what's worth flagging
+  # here; see src/cragb/bench/pooling.py's module docstring.
+  min_pool_size: 12
+
+dense:
+  model_name: BAAI/bge-small-en-v1.5
+  batch_size: 64
+  device: null # null = auto-detect CUDA, else CPU (see DenseRetriever)
