@@ -1,0 +1,17 @@
+# CRAGB relevance labeling configuration (T2.7; PLAN.md §3 E1, §1.4 bottleneck #2).
+
+paths:
+  pools_in: benchmark/pools_v1.jsonl
+  questions_in: benchmark/cragb_questions_v1.jsonl
+  corpus_in: data/processed/corpus_v1.parquet
+  worksheet_out: benchmark/relevance_worksheet_v1.md
+  labels_in: benchmark/relevance_labels_v1.jsonl
+  labels_out: benchmark/relevance_labels_v1.jsonl
+
+corpus:
+  text_col: text
+
+worksheet:
+  # truncate each pooled review's text so the worksheet stays readable
+  # in one pass rather than dominated by a handful of very long reviews
+  max_chars: 600
