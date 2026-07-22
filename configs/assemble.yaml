@@ -1,0 +1,19 @@
+# CRAGB v1 assembly configuration (T2.10; PLAN.md §3 E1, §5).
+#
+# Pure assembly: every field written here was already authored and
+# validated by an earlier task (T2.3 questions/taxonomy, T2.7 relevance,
+# T2.8 reference answers, T2.9 best photo). This step merges them under
+# one schema, re-checks nothing drifted between tasks, and produces the
+# benchmark's datasheet and the leakage-guard manifest E8 will check
+# future fine-tune training data against.
+
+paths:
+  questions_in: benchmark/cragb_questions_v1.jsonl
+  labels_in: benchmark/relevance_labels_v1.jsonl
+  answers_in: benchmark/reference_answers_v1.jsonl
+  photos_in: benchmark/best_photo_v1.jsonl
+  corpus_manifest_in: data/processed/corpus_v1_manifest.json
+
+  cragb_out: benchmark/cragb_v1.jsonl
+  leakage_manifest_out: benchmark/cragb_v1_leakage_manifest.json
+  datasheet_out: benchmark/cragb_v1_datasheet.md
