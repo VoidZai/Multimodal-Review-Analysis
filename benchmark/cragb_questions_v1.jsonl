@@ -1,0 +1,60 @@
+{"id": "fit_sizing_000", "category": "fit_sizing", "question": "Do these run true to size?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_001", "category": "fit_sizing", "question": "Are they loose or tight?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_002", "category": "fit_sizing", "question": "Do they stretch after wear?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_003", "category": "fit_sizing", "question": "Does the length fit as expected, or does it run short or long?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_004", "category": "fit_sizing", "question": "Are they comfortable to wear?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_008", "category": "fit_sizing", "question": "Do they have a flattering fit?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_010", "category": "fit_sizing", "question": "Do buyers report any noticeable flaws in how it fits?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_012", "category": "fit_sizing", "question": "Do buyers who are tall find this fits well?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_016", "category": "fit_sizing", "question": "Do they have a slim fit?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_017", "category": "fit_sizing", "question": "How does this fit people with a petite frame?", "is_negative": false, "image_target": true}
+{"id": "colour_appearance_001", "category": "colour_appearance", "question": "Is the colour as pictured on the listing?", "is_negative": false, "image_target": true}
+{"id": "colour_appearance_002", "category": "colour_appearance", "question": "Do many customers comment on the color being lighter or darker than expected?", "is_negative": false, "image_target": true}
+{"id": "colour_appearance_006", "category": "colour_appearance", "question": "Are there any reviews that discuss how the product's color changes in different lighting conditions?", "is_negative": false, "image_target": true}
+{"id": "colour_appearance_008", "category": "colour_appearance", "question": "How often do reviewers comment on the color being a surprise or pleasant discovery?", "is_negative": false, "image_target": true}
+{"id": "colour_appearance_009", "category": "colour_appearance", "question": "Do buyers describe the colour as looking cheaper or different in person than in photos?", "is_negative": false, "image_target": true}
+{"id": "colour_appearance_010", "category": "colour_appearance", "question": "Do reviewers mention any issues with the color being uneven or inconsistent?", "is_negative": false, "image_target": true}
+{"id": "colour_appearance_011", "category": "colour_appearance", "question": "Can you find any reviews mentioning a color that is more vibrant or muted than expected?", "is_negative": false, "image_target": true}
+{"id": "fabric_quality_000", "category": "fabric_quality", "question": "Is the fabric used in this product prone to snagging or running?", "is_negative": false, "image_target": true}
+{"id": "fabric_quality_001", "category": "fabric_quality", "question": "Do buyers describe the fabric as soft or scratchy?", "is_negative": false, "image_target": true}
+{"id": "fabric_quality_002", "category": "fabric_quality", "question": "Can the material be stretched or does it lose its shape easily?", "is_negative": false, "image_target": true}
+{"id": "fabric_quality_003", "category": "fabric_quality", "question": "Does the construction of the product feel solid and well-made?", "is_negative": false, "image_target": true}
+{"id": "fabric_quality_005", "category": "fabric_quality", "question": "Is the fabric breathable and moisture-wicking?", "is_negative": false, "image_target": true}
+{"id": "fabric_quality_006", "category": "fabric_quality", "question": "How does the color of the fabric hold up to repeated washing and wear?", "is_negative": false, "image_target": true}
+{"id": "fabric_quality_007", "category": "fabric_quality", "question": "Does the material feel warm or cold to the touch?", "is_negative": false, "image_target": true}
+{"id": "fabric_quality_014", "category": "fabric_quality", "question": "Are there any noticeable odors or chemical smells associated with the fabric?", "is_negative": false, "image_target": true}
+{"id": "durability_000", "category": "durability", "question": "Does this fall apart easily after repeated wear?", "is_negative": false, "image_target": true}
+{"id": "durability_001", "category": "durability", "question": "Will this product last a long time if I use it regularly?", "is_negative": false, "image_target": true}
+{"id": "durability_002", "category": "durability", "question": "Does this stay in good condition after multiple washes?", "is_negative": false, "image_target": true}
+{"id": "durability_004", "category": "durability", "question": "Are the materials used in this product prone to fraying or tearing?", "is_negative": false, "image_target": true}
+{"id": "durability_007", "category": "durability", "question": "How well do these products hold up against water and moisture?", "is_negative": false, "image_target": true}
+{"id": "durability_010", "category": "durability", "question": "Can you expect these products to retain their shape and structure after repeated use?", "is_negative": false, "image_target": true}
+{"id": "defects_000", "category": "defects", "question": "Do buyers mention any issues with the quality of stitching?", "is_negative": false, "image_target": true}
+{"id": "defects_001", "category": "defects", "question": "How common are reports of damage or defects upon arrival?", "is_negative": false, "image_target": true}
+{"id": "defects_005", "category": "defects", "question": "Are there any complaints about defects or damage to the packaging?", "is_negative": false, "image_target": true}
+{"id": "defects_007", "category": "defects", "question": "How common are reports of missing parts or accessories upon arrival?", "is_negative": false, "image_target": true}
+{"id": "defects_010", "category": "defects", "question": "How often do reviewers mention problems with assembly or construction of the product?", "is_negative": false, "image_target": true}
+{"id": "defects_011", "category": "defects", "question": "Are there any complaints about defects or damage to the product's finish or coating?", "is_negative": false, "image_target": true}
+{"id": "occasion_000", "category": "occasion", "question": "Is this suitable for everyday wear?", "is_negative": false, "image_target": true}
+{"id": "occasion_001", "category": "occasion", "question": "Is this good for work or formal events?", "is_negative": false, "image_target": true}
+{"id": "occasion_002", "category": "occasion", "question": "Do buyers say this is suitable for a party?", "is_negative": false, "image_target": true}
+{"id": "occasion_003", "category": "occasion", "question": "Can I wear this in cold weather?", "is_negative": false, "image_target": true}
+{"id": "occasion_006", "category": "occasion", "question": "Is this suitable for outdoor activities like hiking?", "is_negative": false, "image_target": true}
+{"id": "occasion_009", "category": "occasion", "question": "Would I be able to wear this to a wedding?", "is_negative": false, "image_target": true}
+{"id": "occasion_010", "category": "occasion", "question": "Is this suitable for hot summer days?", "is_negative": false, "image_target": true}
+{"id": "value_000", "category": "value", "question": "Is this worth the extra cost?", "is_negative": false, "image_target": true}
+{"id": "value_001", "category": "value", "question": "Do buyers think this item is overpriced?", "is_negative": false, "image_target": true}
+{"id": "value_002", "category": "value", "question": "Is the quality of this product consistent with its price?", "is_negative": false, "image_target": true}
+{"id": "value_004", "category": "value", "question": "Do customers feel like this product is a good investment?", "is_negative": false, "image_target": true}
+{"id": "value_006", "category": "value", "question": "Would buyers recommend this as good value for the price?", "is_negative": false, "image_target": true}
+{"id": "fit_sizing_neg_000", "category": "fit_sizing", "question": "Do buyers report the exact chest measurement in inches for the size medium?", "is_negative": true, "image_target": false}
+{"id": "fit_sizing_neg_001", "category": "fit_sizing", "question": "Does the manufacturer's official size chart match what buyers experience?", "is_negative": true, "image_target": false}
+{"id": "colour_appearance_neg_000", "category": "colour_appearance", "question": "Does the dye lot number affect the shade of colour received?", "is_negative": true, "image_target": false}
+{"id": "fabric_quality_neg_000", "category": "fabric_quality", "question": "What is the exact thread count of the fabric used?", "is_negative": true, "image_target": false}
+{"id": "fabric_quality_neg_001", "category": "fabric_quality", "question": "Is the fabric OEKO-TEX certified according to buyers?", "is_negative": true, "image_target": false}
+{"id": "durability_neg_000", "category": "durability", "question": "How many wash cycles on average does the product survive under controlled lab testing?", "is_negative": true, "image_target": false}
+{"id": "durability_neg_001", "category": "durability", "question": "Does the manufacturer offer a specific multi-year warranty on durability?", "is_negative": true, "image_target": false}
+{"id": "defects_neg_000", "category": "defects", "question": "What percentage of units shipped have a manufacturing defect, according to internal QA data?", "is_negative": true, "image_target": false}
+{"id": "defects_neg_001", "category": "defects", "question": "Do buyers report the specific factory batch number associated with defective units?", "is_negative": true, "image_target": false}
+{"id": "occasion_neg_000", "category": "occasion", "question": "Is this item officially licensed or endorsed for use at professional sporting events?", "is_negative": true, "image_target": false}
+{"id": "value_neg_000", "category": "value", "question": "What is the exact wholesale cost the seller pays for this item?", "is_negative": true, "image_target": false}

@@ -42,6 +42,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from cragb.bench.taxonomy import TaxonomyCategory, TaxonomySpec, load_taxonomy
+from cragb.data.vocab_check import matches_any_keyword
 from cragb.generate.api_clients import GroqClient
 from cragb.utils.io import load_config, resolve_path
 from cragb.utils.seeds import set_global_seed
@@ -71,19 +72,6 @@ def load_prompt_template(path: str | Path) -> Template:
     """
     text = resolve_path(path).read_text(encoding="utf-8")
     return Template(text)
-
-
-def _matches_category(text: pd.Series, keywords: list[str]) -> pd.Series:
-    """Boolean mask of `text` entries containing any of `keywords` (word-boundary, case-insensitive).
-
-    A small, self-contained duplicate of the matching logic in
-    `cragb.data.vocab_check._compile_category_pattern` — kept local
-    rather than importing that private helper, so this module doesn't
-    reach into another module's internals for four lines of regex.
-    """
-    escaped = sorted((re.escape(k) for k in keywords), key=len, reverse=True)
-    pattern = r"\b(?:" + "|".join(escaped) + r")\b"
-    return text.str.contains(pattern, regex=True, case=False, na=False)
 
 
 def sample_context_reviews(
@@ -122,7 +110,7 @@ def sample_context_reviews(
             drafting, not to silently draft ungrounded questions.
     """
     text = corpus[text_col].fillna("").astype(str)
-    matched = corpus.loc[_matches_category(text, category.keywords)]
+    matched = corpus.loc[matches_any_keyword(text, category.keywords)]
     if matched.empty:
         raise ValueError(
             f"No corpus reviews match category {category.name!r} keywords; "

@@ -1,0 +1,30 @@
+# CRAGB draft-question curation configuration (T2.3; PLAN.md §3 E1).
+#
+# Curation combines cheap automated quality filters with an explicit
+# human decision file (`benchmark/curation_decisions_v1.yaml`) that
+# records an accept/reject call for every quality-passed draft, plus the
+# deliberately-authored negative probes needed to fill each category's
+# negative quota (T2.1) — T2.2's draft prompt only asked for
+# answerable-style questions, so negatives are authored at this stage,
+# not drafted by the LLM.
+
+seed: 42
+
+paths:
+  drafts_in: benchmark/cragb_draft.jsonl
+  taxonomy_config: configs/taxonomy.yaml
+  corpus_in: data/processed/corpus_v1.parquet
+  decisions_in: benchmark/curation_decisions_v1.yaml
+  questions_out: benchmark/cragb_questions_v1.jsonl
+
+quality:
+  min_words: 3
+  max_words: 30
+  require_question_mark: true
+
+image_target:
+  # a category is worth pairing with a best-evidence photo later (T2.9)
+  # if at least this % of its keyword-matching corpus reviews carry an
+  # image; mirrors T1.11's coverage-check philosophy (a plain, auditable
+  # threshold rather than a learned classifier).
+  min_category_coverage_pct: 5.0

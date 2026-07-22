@@ -1,0 +1,235 @@
+# Human curation decisions for CRAGB draft questions (T2.3).
+#
+# Every quality-passed draft id from benchmark/cragb_draft.jsonl must
+# appear in exactly one of `accepted` or `rejected` below —
+# src/cragb/bench/curate.py enforces this and fails loudly on any gap or
+# typo, so this is a complete, auditable record of every call made, not
+# just the ones kept.
+#
+# `negative_questions` are authored directly here, not drafted by the
+# LLM: T2.2's prompt only asked for answerable-style questions, so the
+# deliberately-unanswerable quota T2.1 reserves per category (fixing
+# PLAN.md risk C) is filled by hand at this stage. Each is phrased as a
+# plausible shopper question that in practice asks for a level of detail
+# (exact measurements, lab data, internal manufacturing/QA figures,
+# certifications, warranty policy) that customer review text does not
+# carry — pooling (T2.6) is expected to return an empty or near-empty
+# pool for these, and the correct reference answer (T2.8) is "not enough
+# information".
+
+accepted:
+  # --- fit_sizing (10 of 18) ---
+  - id: fit_sizing_000
+    edited_question: "Do these run true to size?"
+  - id: fit_sizing_001
+  - id: fit_sizing_002
+  - id: fit_sizing_003
+    edited_question: "Does the length fit as expected, or does it run short or long?"
+  - id: fit_sizing_004
+  - id: fit_sizing_008
+  - id: fit_sizing_010
+    edited_question: "Do buyers report any noticeable flaws in how it fits?"
+  - id: fit_sizing_012
+    edited_question: "Do buyers who are tall find this fits well?"
+  - id: fit_sizing_016
+  - id: fit_sizing_017
+    edited_question: "How does this fit people with a petite frame?"
+
+  # --- colour_appearance (7 of 12) ---
+  - id: colour_appearance_001
+    edited_question: "Is the colour as pictured on the listing?"
+  - id: colour_appearance_002
+  - id: colour_appearance_006
+  - id: colour_appearance_008
+  - id: colour_appearance_009
+    edited_question: "Do buyers describe the colour as looking cheaper or different in person than in photos?"
+  - id: colour_appearance_010
+  - id: colour_appearance_011
+
+  # --- fabric_quality (8 of 15) ---
+  - id: fabric_quality_000
+  - id: fabric_quality_001
+    edited_question: "Do buyers describe the fabric as soft or scratchy?"
+  - id: fabric_quality_002
+  - id: fabric_quality_003
+  - id: fabric_quality_005
+  - id: fabric_quality_006
+  - id: fabric_quality_007
+  - id: fabric_quality_014
+
+  # --- durability (6 of 12) ---
+  - id: durability_000
+    edited_question: "Does this fall apart easily after repeated wear?"
+  - id: durability_001
+  - id: durability_002
+    edited_question: "Does this stay in good condition after multiple washes?"
+  - id: durability_004
+  - id: durability_007
+  - id: durability_010
+
+  # --- defects (6 of 12) ---
+  - id: defects_000
+  - id: defects_001
+  - id: defects_005
+  - id: defects_007
+  - id: defects_010
+  - id: defects_011
+
+  # --- occasion (7 of 12) ---
+  - id: occasion_000
+  - id: occasion_001
+    edited_question: "Is this good for work or formal events?"
+  - id: occasion_002
+    edited_question: "Do buyers say this is suitable for a party?"
+  - id: occasion_003
+  - id: occasion_006
+    edited_question: "Is this suitable for outdoor activities like hiking?"
+  - id: occasion_009
+  - id: occasion_010
+
+  # --- value (5 of 9) ---
+  - id: value_000
+    edited_question: "Is this worth the extra cost?"
+  - id: value_001
+  - id: value_002
+  - id: value_004
+  - id: value_006
+    edited_question: "Would buyers recommend this as good value for the price?"
+
+rejected:
+  # --- fit_sizing (8 rejected) ---
+  - id: fit_sizing_005
+    reason: "near-duplicate of fit_sizing_000/001 (generous fit vs true to size/loose-tight)"
+  - id: fit_sizing_006
+    reason: "mis-tagged: this is an occasion question (casual wear), not fit/sizing"
+  - id: fit_sizing_007
+    reason: "too product-specific (hoodies) for a category-wide question"
+  - id: fit_sizing_009
+    reason: "mis-tagged: this is an occasion question (suitable for work), not fit/sizing"
+  - id: fit_sizing_011
+    reason: "too product-specific (waistband/rear implies bottoms only)"
+  - id: fit_sizing_013
+    reason: "not a fit question (styling detail, five-pocket design)"
+  - id: fit_sizing_014
+    reason: "too vague (undefined comparison target)"
+  - id: fit_sizing_015
+    reason: "mis-tagged: this is a fabric_quality/care question, not fit/sizing"
+
+  # --- colour_appearance (5 rejected) ---
+  - id: colour_appearance_000
+    reason: "hard to assess from review text (viewing angle is rarely described); superseded by colour_appearance_006 (lighting)"
+  - id: colour_appearance_003
+    reason: "near-duplicate of colour_appearance_001/002"
+  - id: colour_appearance_004
+    reason: "too meta (asks about discussion frequency, not the attribute itself)"
+  - id: colour_appearance_005
+    reason: "near-duplicate of colour_appearance_002"
+  - id: colour_appearance_007
+    reason: "near-duplicate of colour_appearance_002/011"
+
+  # --- fabric_quality (7 rejected) ---
+  - id: fabric_quality_004
+    reason: "overlaps with the defects category's stitching-complaint questions; kept there instead"
+  - id: fabric_quality_008
+    reason: "overlaps with durability's wash/wear questions"
+  - id: fabric_quality_009
+    reason: "overlaps with durability_004 (fraying/tearing) and durability's pilling coverage"
+  - id: fabric_quality_010
+    reason: "redundant with fabric_quality_007 (touch/temperature already covers this)"
+  - id: fabric_quality_011
+    reason: "narrow/minor (ironing/wrinkling) relative to stronger candidates"
+  - id: fabric_quality_012
+    reason: "near-duplicate of fabric_quality_006 (colorfastness)"
+  - id: fabric_quality_013
+    reason: "more a fit/mobility question than fabric quality"
+
+  # --- durability (6 rejected) ---
+  - id: durability_003
+    reason: "assumes a product type (scratches/scuffs) that doesn't generalize across clothing"
+  - id: durability_005
+    reason: "near-duplicate of durability_000/001"
+  - id: durability_006
+    reason: "recommendation framing, not an evidence-seeking question"
+  - id: durability_008
+    reason: "overlaps with the defects category's seam-complaint questions; kept there instead"
+  - id: durability_009
+    reason: "vague ('frequent repairs') and redundant with durability_000/001"
+  - id: durability_011
+    reason: "too niche (extreme temperature/weather) for the general category"
+
+  # --- defects (6 rejected) ---
+  - id: defects_002
+    reason: "near-duplicate of defects_000 (stitching)"
+  - id: defects_003
+    reason: "near-duplicate of defects_000 (workmanship vs stitching quality)"
+  - id: defects_004
+    reason: "mis-tagged: this is a fit/sizing question, not a defect"
+  - id: defects_006
+    reason: "overlaps with the durability category; kept there instead"
+  - id: defects_008
+    reason: "near-duplicate of defects_000"
+  - id: defects_009
+    reason: "overlaps with the fabric_quality category; kept there instead"
+
+  # --- occasion (5 rejected) ---
+  - id: occasion_004
+    reason: "near-duplicate of occasion_001 (formal occasion vs formal events)"
+  - id: occasion_005
+    reason: "subjective framing ('would I be comfortable') weaker than the other accepted candidates"
+  - id: occasion_007
+    reason: "near-duplicate of occasion_000 (casual/everyday)"
+  - id: occasion_008
+    reason: "near-duplicate of occasion_001 (formal business wear vs formal events)"
+  - id: occasion_011
+    reason: "near-duplicate of occasion_001/009 (formal dinner vs formal events/wedding)"
+
+  # --- value (4 rejected) ---
+  - id: value_003
+    reason: "near-duplicate of value_001 (good deal vs overpriced)"
+  - id: value_005
+    reason: "near-duplicate of value_002 (price reasonable vs price/quality)"
+  - id: value_007
+    reason: "near-duplicate of value_002"
+  - id: value_008
+    reason: "near-duplicate of value_006"
+
+negative_questions:
+  - category: fit_sizing
+    question: "Do buyers report the exact chest measurement in inches for the size medium?"
+    reason: "asks for precise numeric spec data that review text does not typically report"
+  - category: fit_sizing
+    question: "Does the manufacturer's official size chart match what buyers experience?"
+    reason: "asks about the manufacturer's official chart, which review text does not describe"
+
+  - category: colour_appearance
+    question: "Does the dye lot number affect the shade of colour received?"
+    reason: "asks about a manufacturing detail (dye lot) that never appears in consumer reviews"
+
+  - category: fabric_quality
+    question: "What is the exact thread count of the fabric used?"
+    reason: "asks for a precise textile spec that review text does not report"
+  - category: fabric_quality
+    question: "Is the fabric OEKO-TEX certified according to buyers?"
+    reason: "asks about a certification buyers would not know or mention"
+
+  - category: durability
+    question: "How many wash cycles on average does the product survive under controlled lab testing?"
+    reason: "asks for controlled lab-test data, which review text never contains"
+  - category: durability
+    question: "Does the manufacturer offer a specific multi-year warranty on durability?"
+    reason: "asks about seller warranty policy, not something reviewers report on"
+
+  - category: defects
+    question: "What percentage of units shipped have a manufacturing defect, according to internal QA data?"
+    reason: "asks for internal seller QA statistics that are never in review text"
+  - category: defects
+    question: "Do buyers report the specific factory batch number associated with defective units?"
+    reason: "asks for a level of manufacturing traceability reviewers never have or mention"
+
+  - category: occasion
+    question: "Is this item officially licensed or endorsed for use at professional sporting events?"
+    reason: "asks about official licensing status, not something review text discusses"
+
+  - category: value
+    question: "What is the exact wholesale cost the seller pays for this item?"
+    reason: "asks for confidential business data no consumer review would contain"

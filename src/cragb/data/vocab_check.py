@@ -63,6 +63,20 @@ def _compile_category_pattern(terms: list[str]) -> re.Pattern:
     return re.compile(pattern, flags=re.IGNORECASE)
 
 
+def matches_any_keyword(text: pd.Series, keywords: list[str]) -> pd.Series:
+    """Boolean mask of `text` entries containing any of `keywords` (word-boundary, case-insensitive).
+
+    Public reuse point for keyword-based category matching outside this
+    module — `cragb.generate.draft_questions` (sampling grounding
+    reviews per category, T2.2) and `cragb.bench.curate` (estimating
+    per-category image coverage, T2.3) both need the same "does this
+    review mention this category's vocabulary?" check this module
+    already implements for the T1.11 coverage table; this avoids a third
+    copy of the same four lines of regex.
+    """
+    return text.str.contains(_compile_category_pattern(keywords), na=False)
+
+
 @dataclass(frozen=True)
 class CategoryCoverage:
     category: str
