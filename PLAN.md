@@ -375,5 +375,38 @@ Each is low-effort-high-signal given the pipeline already exists:
 
 ---
 
+## SECTION 14 — Build/engineering findings log (things worth knowing before they bite twice)
+
+A running log of concrete gotchas hit during implementation — environment quirks and benchmark-construction surprises — kept here so they're not silently re-discovered in a later session or lost once the task that surfaced them is done.
+
+### 14.1 — Windows MAX_PATH blocks a full local install of the dense-retrieval stack (T2.5)
+
+Installing `sentence-transformers` (and, on first attempt, `torch`'s default CUDA/ROCm wheel) into this machine's actual Python environment hits a **Windows MAX_PATH error**: both packages bundle files nested deep enough (`torch`'s third-party license trees; `transformers/models/deprecated/trajectory_transformer/...`) that the full install path exceeds 260 characters under this Python's per-user site-packages location (`...\WindowsApps\PythonSoftwareFoundation.Python.3.12_...\LocalCache\local-packages\Python312\site-packages\...`).
+
+**Current state (verified 2026-07-22):**
+- Main conda/project env: `torch` (CPU build) and `faiss` install fine and are present; **`sentence-transformers` does not install** — this is the actual blocker. `cragb.retrieval.dense` therefore fails to import here, and its 12 tests correctly skip (not fail) in this environment.
+- Workaround in use: a virtual environment at a short path, `C:\venv\cragb` (e.g. `C:\venv\cragb\Scripts\python.exe`), which keeps the full install path short enough to avoid the limit entirely. This venv has the full stack working, including a CUDA build of `torch` (`2.6.0+cu124`) that correctly detects the RTX 3050 (`torch.cuda.is_available() == True`).
+
+**Not done, and won't be without explicit sign-off:** enabling Windows long-path support system-wide (`HKLM` registry edit, needs admin) — this is a system-settings change, out of scope for an agent to make unilaterally. If preferred over the venv workaround, it needs an explicit go-ahead first.
+
+**Practical implication:** any task needing the dense retriever (E3 retrieval eval, E5 answer generation if it embeds context, etc.) must run via `C:\venv\cragb\Scripts\python.exe`, not the main environment's `python`. `environment.yml` documents both the CPU default and the CUDA install command for this hardware.
+
+### 14.2 — Several of CRAGB v1's authored "negative" questions turned out to be answerable (Mileston2 T2.7)
+
+T2.3 authored 11 deliberately-unanswerable negative questions (one per category's quota) by hand, reasoning that they asked for a level of detail — exact measurements, lab data, internal QA/manufacturing figures, certifications, warranty terms — that customer review text doesn't typically carry. T2.7's actual relevance labeling (reading all 1,176 pooled review candidates against their questions) tested that assumption directly, and it didn't fully hold up.
+
+**Result:** 9 of the 11 negatives unexpectedly have at least one genuinely relevant pooled document:
+`fit_sizing_neg_000`, `fit_sizing_neg_001`, `colour_appearance_neg_000`, `fabric_quality_neg_001`, `durability_neg_000`, `durability_neg_001`, `defects_neg_001`, `occasion_neg_000`, `value_neg_000`.
+
+Only `fabric_quality_neg_000` ("exact thread count") and `defects_neg_000` ("% units with a manufacturing defect per internal QA data") came back genuinely empty, exactly as designed — nobody's review reports a thread count or cites internal QA statistics.
+
+The most striking miss is **`fit_sizing_neg_001`** — "Does the manufacturer's official size chart match what buyers experience?" — where **17 of 19** pooled reviews were genuinely on-topic. Reviewers discuss size-chart mismatches constantly (returns, wrong measurements, chart-vs-garment discrepancies), so this reads as a real, well-evidenced category of shopper question, not a good negative.
+
+**Why this isn't a labeling bug:** `cragb.bench.label_relevance.validate_labels` computes exactly this check (`unexpected_positive_negatives`) as a designed flag, not a hard failure — the point of building it was to catch precisely this kind of authoring mistake by testing it against real data instead of assuming it. It worked.
+
+**Not fixed now, deliberately:** re-authoring these negatives is out of scope for T2.7 (labeling existing pools, not redesigning the taxonomy) and would need a fresh pooling + labeling pass anyway. Worth revisiting in a future CRAGB revision — likely by choosing negatives that ask for information categorically absent from review text everywhere (internal seller data, lab-controlled measurements) rather than plausible-sounding "shopper" phrasings that happen to overlap with common review vocabulary.
+
+---
+
 ### Open input needed from you
 Your **real mid-progress and final deadlines** (§4 durations are on a placeholder 12-week / week-6 schedule). Give me the dates and I'll re-flow the milestones and tell you where to cut if time is tight (first cut: drop CRAGB to ~50 questions and defer the demo, never the pooling or the judge validation).
