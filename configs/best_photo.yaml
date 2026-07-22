@@ -1,0 +1,27 @@
+# CRAGB best-evidence photo selection configuration (T2.9; PLAN.md §3 E7,
+# §1.4 risk D).
+#
+# Scope is deliberately narrow: only questions T2.3 already flagged
+# `image_target: true` (categories with real image-bearing corpus
+# coverage) are considered, and only their T2.7-labeled-*relevant*
+# reviews are eligible photo sources — never the raw pool. Selecting a
+# photo from a merely-retrieved-but-irrelevant review would silently
+# reintroduce exactly the "visual grounding over-claim" PLAN.md risk D
+# warns against: a photo attached to a review that doesn't actually
+# support the question is not evidence.
+
+paths:
+  questions_in: benchmark/cragb_questions_v1.jsonl
+  labels_in: benchmark/relevance_labels_v1.jsonl
+  corpus_in: data/processed/corpus_v1.parquet
+  worksheet_out: benchmark/best_photo_worksheet_v1.md
+  selections_in: benchmark/best_photo_v1.jsonl
+  selections_out: benchmark/best_photo_v1.jsonl
+
+corpus:
+  text_col: text
+  image_col: has_image
+  image_urls_col: image_urls
+
+worksheet:
+  max_chars: 500

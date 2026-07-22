@@ -1,0 +1,49 @@
+{"question_id": "fit_sizing_000", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fit_sizing_001", "doc_id": "70254", "reason": "socks review explicitly confirms 'not too loose or tight' with a product photo"}
+{"question_id": "fit_sizing_002", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fit_sizing_003", "doc_id": "15041", "reason": "only image-bearing relevant candidate; directly addresses length running short"}
+{"question_id": "fit_sizing_004", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fit_sizing_008", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fit_sizing_010", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fit_sizing_012", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fit_sizing_016", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fit_sizing_017", "doc_id": "361", "reason": "reviewer explicitly took photos to show fit on a petite/short frame"}
+{"question_id": "colour_appearance_001", "doc_id": "176920", "reason": "review explicitly directs readers to attached photos comparing received colour to the listing"}
+{"question_id": "colour_appearance_002", "doc_id": "23021", "reason": "only image-bearing relevant candidate; directly describes colour darker than pictured"}
+{"question_id": "colour_appearance_006", "doc_id": "47004", "reason": "most specific lighting-dependent colour description (natural vs indoor light) among the candidates"}
+{"question_id": "colour_appearance_008", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "colour_appearance_009", "doc_id": "38066", "reason": "review explicitly posted a comparison photo of actual vs expected colour"}
+{"question_id": "colour_appearance_010", "doc_id": "59714", "reason": "most detailed description of colour/size inconsistency across items in the pool"}
+{"question_id": "colour_appearance_011", "doc_id": "28890", "reason": "direct vibrant-picture vs muted-received colour comparison"}
+{"question_id": "fabric_quality_000", "doc_id": "90485", "reason": "review explicitly references 'the pictures above' showing snagging damage"}
+{"question_id": "fabric_quality_001", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fabric_quality_002", "doc_id": "53313", "reason": "only image-bearing relevant candidate; directly addresses shape retention after cleaning"}
+{"question_id": "fabric_quality_003", "doc_id": "59092", "reason": "clearly documents poor construction (material coming undone, front lifted)"}
+{"question_id": "fabric_quality_005", "doc_id": "186595", "reason": "representative product photo with an explicit breathable/moisture-wicking claim"}
+{"question_id": "fabric_quality_006", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "fabric_quality_007", "doc_id": "25406", "reason": "only image-bearing relevant candidate; directly addresses warm/cold touch"}
+{"question_id": "fabric_quality_014", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "durability_000", "doc_id": "94347", "reason": "only image-bearing relevant candidate; directly reports seams coming apart after two wears"}
+{"question_id": "durability_001", "doc_id": "86149", "reason": "only image-bearing relevant candidate; directly addresses long-term durability"}
+{"question_id": "durability_002", "doc_id": "116481", "reason": "review explicitly compares the washed garment to its own listing photo"}
+{"question_id": "durability_004", "doc_id": "198964", "reason": "clearest, most specific description of visible fraying damage"}
+{"question_id": "durability_007", "doc_id": "123923", "reason": "most specific water/moisture performance detail (85% water proof, breaks down past a threshold)"}
+{"question_id": "durability_010", "doc_id": "165020", "reason": "clearest structural-failure description (backings crushed and snapped) among the candidates"}
+{"question_id": "defects_000", "doc_id": "134370", "reason": "clear, specific stitching defect (unraveled seam) likely visible in the photo"}
+{"question_id": "defects_001", "doc_id": "124643", "reason": "describes multiple distinct arrival flaws, a representative arrival-damage case"}
+{"question_id": "defects_005", "doc_id": "140332", "reason": "clearest packaging-specific damage description (glue on package, damaged before use)"}
+{"question_id": "defects_007", "doc_id": "119673", "reason": "clear, specific missing-parts case (missing rhinestones) suited to photo evidence"}
+{"question_id": "defects_010", "doc_id": "138944", "reason": "most detailed construction/assembly defect description (loose stitching, improperly wrapped leather)"}
+{"question_id": "defects_011", "doc_id": "82437", "reason": "clear finish defect (discoloration) with an explicit visual reference"}
+{"question_id": "occasion_000", "doc_id": "99931", "reason": "only image-bearing relevant candidate; directly addresses everyday/office suitability"}
+{"question_id": "occasion_001", "doc_id": "50873", "reason": "only image-bearing relevant candidate; directly addresses formal-event suitability"}
+{"question_id": "occasion_002", "doc_id": "92260", "reason": "clear, well-made party-appropriate dress description"}
+{"question_id": "occasion_003", "doc_id": "106096", "reason": "directly and clearly addresses cold-weather suitability"}
+{"question_id": "occasion_006", "doc_id": null, "reason": "no image-bearing relevant candidate in the pool"}
+{"question_id": "occasion_009", "doc_id": "187325", "reason": "most direct positive account of wearing the item to a wedding, with compliments"}
+{"question_id": "occasion_010", "doc_id": "88571", "reason": "directly and clearly addresses hot-summer-day suitability"}
+{"question_id": "value_000", "doc_id": "112368", "reason": "only image-bearing relevant candidate; directly weighs cost against build quality"}
+{"question_id": "value_001", "doc_id": "96221", "reason": "only image-bearing relevant candidate; directly addresses whether the item is overpriced"}
+{"question_id": "value_002", "doc_id": "133875", "reason": "directly compares quality to price with a clear positive verdict"}
+{"question_id": "value_004", "doc_id": "82046", "reason": "only image-bearing relevant candidate; directly frames the purchase as a good investment"}
+{"question_id": "value_006", "doc_id": "120579", "reason": "only image-bearing relevant candidate; directly addresses value for price"}
