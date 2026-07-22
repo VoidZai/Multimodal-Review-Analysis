@@ -18,3 +18,23 @@ dependencies:
       - langdetect==1.0.9
       - python-dotenv==1.2.*
       - rank_bm25==0.2.*
+      # Dense retrieval (T2.5). On Windows, installing these into a
+      # deeply-nested site-packages path (e.g. the Microsoft Store
+      # Python's per-user install location) can hit MAX_PATH errors from
+      # torch/transformers' bundled license files. If `pip install`
+      # fails with "filename or extension is too long", either enable
+      # Windows long-path support (see
+      # https://pip.pypa.io/warnings/enable-long-paths, requires admin)
+      # or install into a venv at a short path (e.g. `C:\venv\cragb`)
+      # instead — both avoid the issue; this project's own dev
+      # environment uses the latter.
+      #
+      # `torch` below installs the default (CPU) wheel. On a CUDA-capable
+      # GPU (this project's dev machine: RTX 3050 Laptop, 4GB VRAM,
+      # driver supports CUDA 12.7), install a matching CUDA build instead
+      # for a ~10-20x encoding speedup — `DenseRetriever` auto-detects
+      # and uses CUDA when available either way:
+      #   pip install --index-url https://download.pytorch.org/whl/cu124 torch
+      - torch
+      - sentence-transformers
+      - faiss-cpu
