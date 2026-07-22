@@ -1,0 +1,15 @@
+# CRAGB reference-answer configuration (T2.8; PLAN.md §3 E1).
+#
+# Reference answers are authored directly into `answers_in`/`answers_out`
+# (the same file, like T2.7's relevance-labels file) — there is no
+# automated draft-then-curate step here, since a reference answer is a
+# synthesis of already-labeled evidence, not a new judgment call to
+# screen. `validate` re-derives grounding correctness from the answer
+# text itself (citation markers) rather than trusting a separately
+# maintained citation list.
+
+paths:
+  questions_in: benchmark/cragb_questions_v1.jsonl
+  labels_in: benchmark/relevance_labels_v1.jsonl
+  answers_in: benchmark/reference_answers_v1.jsonl
+  answers_out: benchmark/reference_answers_v1.jsonl

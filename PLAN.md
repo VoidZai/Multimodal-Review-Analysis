@@ -406,6 +406,16 @@ The most striking miss is **`fit_sizing_neg_001`** — "Does the manufacturer's 
 
 **Not fixed now, deliberately:** re-authoring these negatives is out of scope for T2.7 (labeling existing pools, not redesigning the taxonomy) and would need a fresh pooling + labeling pass anyway. Worth revisiting in a future CRAGB revision — likely by choosing negatives that ask for information categorically absent from review text everywhere (internal seller data, lab-controlled measurements) rather than plausible-sounding "shopper" phrasings that happen to overlap with common review vocabulary.
 
+### 14.3 — An exact-equality invariant check silently became dead code (Milestone 2 T2.8)
+
+`cragb.bench.reference_answers.make_reference_answer` needed a guard against an authoring mistake: an abstention answer ("not enough information...") that also carries a citation marker, which is self-contradictory. The first version detected abstention via **exact string equality** to the canonical abstention phrase, then checked `if is_abstention and citations_found: raise`.
+
+That guard could never fire. If a citation marker is appended to the phrase, the text is no longer *exactly equal* to the canonical string — so `is_abstention` is `False` before the citation is even inspected, and the contradiction check is unreachable by construction. The bug was caught by the unit test written specifically to prove the guard worked (`test_abstention_text_with_citations_raises`) — it failed with "did not raise," which is what surfaced the dead code.
+
+**Fix:** detect abstention by *containment* (`ABSTENTION_TEXT in answer_text`) rather than exact equality, so appending a stray citation still matches "this is an abstention" and the contradiction guard becomes reachable.
+
+**General lesson for future validation/guard code:** when a check's trigger condition is defined by exact equality to a fixed constant, and the thing you're guarding against is "constant + extra content," the guard is structurally unreachable — equality can never hold once anything is appended. Prefer containment, a prefix/suffix check, or restructuring the invariant so the failure mode you're testing for is actually representable by the detection condition. Write the test for the guard *before* trusting it, the way this one was — that's what caught it here, before it ever mattered in production data.
+
 ---
 
 ### Open input needed from you
