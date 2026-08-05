@@ -1,0 +1,33 @@
+# Retrieval evaluation harness configuration (T3.5; PLAN.md §3 E3, M3.md T3.5).
+#
+# Fixes RQ2's shared parameters (PLAN.md §2 RQ2: retriever type is the
+# only thing that varies; corpus, chunking, and k are controls held
+# identical across BM25 and dense) in one place, so both the index-build
+# step (T3.5, `cragb.eval.run_retrieval_eval`) and the full eval run
+# (T3.6+) read the same config rather than risking the two drifting
+# apart.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+  # Consumed by T3.6's eval run, not by T3.5's index-build step directly
+  # — declared here now so both stages share one config file.
+  questions_in: benchmark/cragb_v1.jsonl
+  build_report_out: results/tables/retrieval_index_build_v1.json
+
+# T3.4's locked decision (results/tables/chunking_study_v1.csv):
+# whole_review beat every other scheme on Recall@k. Both retrievers are
+# indexed under whatever `configs/chunking.yaml` currently specifies —
+# not hardcoded here — so a future re-run of the chunking study only
+# needs to update one file.
+chunking_config: configs/chunking.yaml
+
+k_values: [1, 3, 5, 10]
+
+retrievers:
+  bm25: {}   # no tunable parameters (cragb.retrieval.bm25.BM25Retriever)
+  dense:
+    model_name: BAAI/bge-small-en-v1.5
+    batch_size: 64
+    device: null   # null = auto-detect CUDA, else CPU (see DenseRetriever)

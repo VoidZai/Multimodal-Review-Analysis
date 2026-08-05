@@ -1,0 +1,52 @@
+[
+  {
+    "retriever": "bm25",
+    "n_chunks": 200000,
+    "n_parent_docs": 200000,
+    "build_seconds": 5.031,
+    "device": null,
+    "smoke_query": "does this run true to size",
+    "smoke_hits": [
+      {
+        "doc_id": "73937",
+        "score": 16.8797,
+        "snippet": "Does not run true to size. I hung out everywhere. Very pretty, just small"
+      },
+      {
+        "doc_id": "11863",
+        "score": 16.2867,
+        "snippet": "Does not run true to size. Cute sweater but due to the small fit it was returned."
+      },
+      {
+        "doc_id": "119237",
+        "score": 15.131,
+        "snippet": "Nice looking but too small. Does not run true to US sizes."
+      }
+    ]
+  },
+  {
+    "retriever": "dense",
+    "n_chunks": 200000,
+    "n_parent_docs": 200000,
+    "build_seconds": 459.812,
+    "device": "cuda",
+    "smoke_query": "does this run true to size",
+    "smoke_hits": [
+      {
+        "doc_id": "181526",
+        "score": 0.8239,
+        "snippet": "No issues runs true to size"
+      },
+      {
+        "doc_id": "114158",
+        "score": 0.7922,
+        "snippet": "Very true to the size"
+      },
+      {
+        "doc_id": "14252",
+        "score": 0.7786,
+        "snippet": "Loved it but didn\u2019t fit me the way I wanted it. Runs true to size and beautiful."
+      }
+    ]
+  }
+]
