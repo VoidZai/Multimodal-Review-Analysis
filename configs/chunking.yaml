@@ -11,13 +11,21 @@
 #
 # `scheme` below is the *active default* used by anything that loads this
 # config directly (e.g. the retrieval eval harness, T3.5+, run without an
-# explicit override). It ships as `whole_review` here — PLAN.md §3 E2's
-# own working expectation, since Amazon reviews are typically short
-# enough that splitting them may add index size without adding recall —
-# but that is a hypothesis, not a decision. T3.4 is the task that tests
-# all three schemes on CRAGB's actual questions and overwrites this value
-# with whichever wins on Recall@k. Treat this default as provisional
-# until `results/tables/chunking_study_v1.csv` exists.
+# explicit override).
+#
+# DECIDED (T3.4, notebooks/04_chunking_study.ipynb, results/tables/
+# chunking_study_v1.csv): `whole_review` wins BM25 Recall@k at every
+# k in {1,3,5,10} on all 58 scorable CRAGB v1 questions (200k-review
+# corpus_v1), though it is statistically indistinguishable from
+# fixed_token_256 (heavily overlapping 95% bootstrap CIs — splitting at
+# 256 words barely touches most reviews, since only ~2.7% of corpus_v1
+# exceeds 256 tokens). fixed_token_128 trails noticeably, and
+# sentence_window_3 is the clear loser (~half whole_review's Recall@10:
+# 0.246 vs 0.504) — 3-sentence windows fragment the exact keyword
+# co-occurrences BM25 relies on in already-short review text. This
+# confirms PLAN.md §3 E2's working hypothesis on real data rather than
+# assuming it; `whole_review` is locked in for RQ2 (T3.6+) and every
+# later retrieval eval, not provisional.
 
 seed: 42
 
