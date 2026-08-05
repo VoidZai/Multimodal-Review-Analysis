@@ -1,0 +1,30 @@
+# Chunking configuration (T3.1; PLAN.md §3 E2, M3.md T3.1).
+#
+# Three candidate schemes, compared with evidence (not assumed) by the
+# chunking study in T3.4:
+#   - whole_review:     one chunk per review — the corpus's natural unit.
+#   - fixed_token:      reviews split into fixed-size, non-overlapping
+#                        windows of `fixed_token_size` words (PLAN.md §3
+#                        E2 calls for both 128 and 256 to be tried).
+#   - sentence_window:   reviews split into non-overlapping windows of
+#                        `sentence_window_size` sentences each.
+#
+# `scheme` below is the *active default* used by anything that loads this
+# config directly (e.g. the retrieval eval harness, T3.5+, run without an
+# explicit override). It ships as `whole_review` here — PLAN.md §3 E2's
+# own working expectation, since Amazon reviews are typically short
+# enough that splitting them may add index size without adding recall —
+# but that is a hypothesis, not a decision. T3.4 is the task that tests
+# all three schemes on CRAGB's actual questions and overwrites this value
+# with whichever wins on Recall@k. Treat this default as provisional
+# until `results/tables/chunking_study_v1.csv` exists.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+
+chunking:
+  scheme: whole_review          # one of: whole_review | fixed_token | sentence_window
+  fixed_token_size: 256         # words per chunk, used when scheme == fixed_token
+  sentence_window_size: 3       # sentences per chunk, used when scheme == sentence_window
