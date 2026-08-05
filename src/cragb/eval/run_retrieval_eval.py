@@ -1,14 +1,20 @@
-"""Retrieval eval harness: config + index build (T3.5; PLAN.md §3 E3).
+"""Retrieval eval harness: config, index build, and RQ2 eval run (T3.5/T3.6; PLAN.md §3 E3).
 
-T3.5's scope is narrower than the file name suggests: this module's job
-right now is to stand up `configs/retrieval_eval.yaml`, build BM25 and
-dense indexes over `corpus_v1` under T3.4's locked chunking scheme, and
-confirm both are actually queryable — logging build time as it goes, so
-that number is available for the cost/latency table later (E6/M5). It
-does **not** yet run the full CRAGB question set through both retrievers
-or compute Recall/nDCG/MRR — that is T3.6's "eval-running portion",
-added to this same file rather than a new one, since it shares this
-module's config and indexes.
+Two stages, both in this one module (T3.5's docstring committed to
+adding T3.6 here rather than a new file, since both share this module's
+config and indexes):
+
+- **Index build (T3.5):** `build_retriever`/`build_all_retrievers` chunk
+  `corpus_v1` under T3.4's locked scheme, index BM25 and dense, and
+  confirm both are queryable via a smoke query — logging build time for
+  the eventual cost/latency table (E6/M5).
+- **RQ2 eval run (T3.6):** `score_retriever`/`summarize_metrics`/
+  `compute_significance`/`run_rq2_eval` run every CRAGB v1 question
+  through both indexed retrievers at every `k`, computing Recall/Hit/
+  nDCG/MRR (`cragb.eval.metrics_retrieval`) with bootstrap 95% CIs
+  (`cragb.eval.bootstrap`) and a paired Wilcoxon significance test
+  between BM25 and dense at each `k` — the headline RQ2 table and
+  figure (PLAN.md §7).
 
 Windows note (PLAN.md §14.1): `DenseRetriever` needs `torch` +
 `sentence-transformers` + `faiss`, which fail to install into this
@@ -40,13 +46,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
+from tqdm import tqdm
 
+from cragb.eval.bootstrap import bootstrap_ci, paired_significance
+from cragb.eval.chunking_study import collapse_chunk_ranking_to_parents
+from cragb.eval.cragb_questions import RetrievalQuestion
+from cragb.eval.metrics_retrieval import score_all
 from cragb.retrieval.base import Retriever
 from cragb.retrieval.bm25 import BM25Retriever
 from cragb.retrieval.chunking import chunk_corpus, load_chunking_config
 from cragb.utils.io import load_config, resolve_path
 
 logger = logging.getLogger(__name__)
+
+_METRIC_NAMES = ("recall", "hit", "ndcg", "mrr")
 
 
 # --------------------------------------------------------------------------
@@ -284,16 +297,277 @@ def build_all_retrievers(
 
 
 # --------------------------------------------------------------------------
+# RQ2 eval run (T3.6)
+# --------------------------------------------------------------------------
+
+
+def score_retriever(
+    retriever: Retriever,
+    chunk_to_parent: dict[str, str],
+    questions: list[RetrievalQuestion],
+    k_values: tuple[int, ...],
+    chunk_search_multiplier: int = 1,
+    show_progress: bool = True,
+) -> pd.DataFrame:
+    """Score one already-indexed retriever against every question, at every k.
+
+    Args:
+        retriever: an already-`.index()`-ed `Retriever`.
+        chunk_to_parent: maps every indexed chunk id to its parent review
+            id, exactly as in `cragb.eval.chunking_study.run_scheme_recall`
+            — chunk-level hits are collapsed to review-level hits before
+            scoring, so results mean the same thing regardless of
+            `configs/chunking.yaml`'s scheme.
+        questions: pre-filtered scorable questions
+            (`cragb.eval.cragb_questions.filter_scorable`) — a question
+            with empty `relevant_ids` makes `score_all` raise, by design.
+        k_values: the `k`s to score at.
+        chunk_search_multiplier: raw chunks requested per query is
+            `max(k_values) * chunk_search_multiplier` before collapsing
+            to unique parents (see `run_scheme_recall`'s docstring for
+            why). Defaults to `1` because T3.4 locked `whole_review`
+            (one chunk per review, so `chunk_id == parent_doc_id`
+            already) — a future re-locked multi-chunk scheme would need
+            a larger multiplier here, the same way T3.4's chunking study
+            needed one.
+        show_progress: show a `tqdm` progress bar over questions.
+
+    Returns:
+        Long-format `[question_id, type, k, recall, hit, ndcg, mrr]`,
+        one row per (question, k) pair.
+    """
+    chunk_search_k = max(k_values) * chunk_search_multiplier
+
+    rows: list[dict[str, object]] = []
+    iterator = tqdm(questions, desc="scoring", disable=not show_progress)
+    for question in iterator:
+        hits = retriever.search(question.question, k=chunk_search_k)
+        ranked_parents = collapse_chunk_ranking_to_parents(
+            [hit.doc_id for hit in hits], chunk_to_parent
+        )
+        scores_by_k = score_all(ranked_parents, question.relevant_ids, list(k_values))
+        for k, metric_scores in scores_by_k.items():
+            rows.append(
+                {"question_id": question.id, "type": question.type, "k": k, **metric_scores}
+            )
+
+    return pd.DataFrame(rows)
+
+
+def summarize_metrics(
+    per_question: pd.DataFrame,
+    retriever: str,
+    n_boot: int = 10000,
+    alpha: float = 0.05,
+    rng=None,
+) -> pd.DataFrame:
+    """Per-`k` mean + bootstrap CI for every metric, from `score_retriever`'s output.
+
+    Args:
+        per_question: output of `score_retriever` for one retriever.
+        retriever: label to attach as the `retriever` column.
+        n_boot, alpha, rng: forwarded to `cragb.eval.bootstrap.bootstrap_ci`
+            for every (metric, k) pair.
+
+    Returns:
+        One row per distinct `k`, columns
+        `[retriever, k, n_questions, recall_mean, recall_ci_lo,
+        recall_ci_hi, hit_mean, ..., mrr_ci_hi]`.
+    """
+    rows: list[dict[str, object]] = []
+    for k, group in per_question.groupby("k"):
+        row: dict[str, object] = {"retriever": retriever, "k": k, "n_questions": len(group)}
+        for metric in _METRIC_NAMES:
+            scores = group[metric].tolist()
+            lo, hi = bootstrap_ci(scores, n_boot=n_boot, alpha=alpha, rng=rng)
+            row[f"{metric}_mean"] = sum(scores) / len(scores)
+            row[f"{metric}_ci_lo"] = lo
+            row[f"{metric}_ci_hi"] = hi
+        rows.append(row)
+    return pd.DataFrame(rows).sort_values("k").reset_index(drop=True)
+
+
+def compute_significance(
+    per_question_bm25: pd.DataFrame,
+    per_question_dense: pd.DataFrame,
+    k_values: tuple[int, ...],
+) -> pd.DataFrame:
+    """Paired Wilcoxon p-value per (metric, k) between BM25 and dense.
+
+    Questions are the paired unit (PLAN.md §8): each question's BM25
+    score at a given `k` is paired with that *same* question's dense
+    score at that `k`, not compared as independent samples.
+
+    Args:
+        per_question_bm25: `score_retriever`'s output for BM25.
+        per_question_dense: `score_retriever`'s output for dense.
+        k_values: the `k`s to test at.
+
+    Returns:
+        One row per `k`, columns
+        `[k, recall_wilcoxon_p, hit_wilcoxon_p, ndcg_wilcoxon_p, mrr_wilcoxon_p]`.
+
+    Raises:
+        ValueError: if the two retrievers were scored on different
+            question sets at some `k` — they must be pairable 1:1 by
+            `question_id`.
+    """
+    rows: list[dict[str, object]] = []
+    for k in k_values:
+        bm25_k = per_question_bm25.loc[per_question_bm25["k"] == k].set_index("question_id")
+        dense_k = per_question_dense.loc[per_question_dense["k"] == k].set_index("question_id")
+        if set(bm25_k.index) != set(dense_k.index):
+            raise ValueError(
+                f"BM25 and dense were scored on different questions at k={k}; "
+                "cannot pair for a significance test."
+            )
+        row: dict[str, object] = {"k": k}
+        for metric in _METRIC_NAMES:
+            row[f"{metric}_wilcoxon_p"] = paired_significance(
+                bm25_k[metric].tolist(), dense_k.loc[bm25_k.index, metric].tolist()
+            )
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def run_rq2_eval(
+    corpus: pd.DataFrame,
+    config: RetrievalEvalConfig,
+    questions: list[RetrievalQuestion],
+    smoke_query: str = "does this run true to size",
+    n_boot: int = 10000,
+    alpha: float = 0.05,
+    rng=None,
+    show_progress: bool = True,
+) -> tuple[pd.DataFrame, dict[str, pd.DataFrame], dict[str, IndexBuildReport]]:
+    """Run the full RQ2 comparison end-to-end: build both indexes, score, summarize.
+
+    The single entry point for T3.6: builds BM25 and dense indexes
+    (T3.5's `build_all_retrievers`, unchanged — reused rather than
+    duplicated), scores every question in `questions` against both at
+    every `k` in `config.k_values`, and returns the headline table plus
+    the raw per-question scores (needed by T3.7's per-type breakdown).
+
+    Args:
+        corpus: `corpus_v1`-shaped DataFrame.
+        config: a `RetrievalEvalConfig`.
+        questions: pre-filtered scorable questions (see `score_retriever`).
+        smoke_query: forwarded to `build_all_retrievers`.
+        n_boot, alpha, rng: forwarded to `summarize_metrics`. Pass a
+            seeded `rng` (e.g. via `cragb.utils.seeds.set_global_seed`)
+            for a fully reproducible run.
+        show_progress: show a `tqdm` progress bar per retriever.
+
+    Returns:
+        `(rq2_table, per_question_by_retriever, build_reports)`:
+        - `rq2_table`: one row per (retriever, k) — Recall/Hit/nDCG/MRR
+          mean + 95% CI, `n_questions`, and a paired Wilcoxon p-value per
+          metric (duplicated across both retrievers' rows at a given
+          `k`, since significance is a property of the *pair*, not of
+          either retriever alone — this keeps the CSV self-contained
+          without requiring a join to read the significance column).
+        - `per_question_by_retriever`: `{"bm25": df, "dense": df}`, each
+          `score_retriever`'s raw long-format output.
+        - `build_reports`: `{"bm25": IndexBuildReport, "dense": IndexBuildReport}`.
+    """
+    built = build_all_retrievers(corpus, config, smoke_query=smoke_query)
+
+    chunking_config = load_chunking_config(config.chunking_config_path)
+    chunks = chunk_corpus(corpus, chunking_config)
+    chunk_to_parent = dict(zip(chunks["chunk_id"], chunks["parent_doc_id"]))
+
+    per_question: dict[str, pd.DataFrame] = {}
+    for name, (retriever, _report) in built.items():
+        logger.info("scoring %s against %d questions", name, len(questions))
+        per_question[name] = score_retriever(
+            retriever, chunk_to_parent, questions, config.k_values, show_progress=show_progress
+        )
+
+    summaries = {
+        name: summarize_metrics(df, retriever=name, n_boot=n_boot, alpha=alpha, rng=rng)
+        for name, df in per_question.items()
+    }
+    significance = compute_significance(
+        per_question["bm25"], per_question["dense"], config.k_values
+    )
+
+    rq2_table = (
+        pd.concat(summaries.values(), ignore_index=True)
+        .merge(significance, on="k", how="left")
+        .sort_values(["k", "retriever"])
+        .reset_index(drop=True)
+    )
+
+    build_reports = {name: report for name, (_retriever, report) in built.items()}
+    return rq2_table, per_question, build_reports
+
+
+def plot_recall_at_k(rq2_table: pd.DataFrame, out_path: str | Path) -> None:
+    """Recall@k-vs-k line chart, both retrievers overlaid with 95% CI error bars.
+
+    PLAN.md §7 figure #2 — the RQ2 headline figure.
+
+    Args:
+        rq2_table: `run_rq2_eval`'s summary table (must have
+            `retriever`, `k`, `recall_mean`, `recall_ci_lo`,
+            `recall_ci_hi` columns).
+        out_path: where to save the figure (parent directories created
+            as needed), absolute or relative to the repo root.
+    """
+    import matplotlib.pyplot as plt  # lazy: plotting is optional for callers that only need the table
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    for retriever, group in rq2_table.groupby("retriever"):
+        group = group.sort_values("k")
+        ax.errorbar(
+            group["k"],
+            group["recall_mean"],
+            yerr=[
+                group["recall_mean"] - group["recall_ci_lo"],
+                group["recall_ci_hi"] - group["recall_mean"],
+            ],
+            marker="o",
+            capsize=3,
+            label=retriever,
+        )
+    ax.set_xlabel("k")
+    ax.set_ylabel("Recall@k")
+    ax.set_title("RQ2: Recall@k, BM25 vs dense (CRAGB v1, 95% bootstrap CI)")
+    ax.set_xticks(sorted(rq2_table["k"].unique()))
+    ax.legend()
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+
+    resolved_out_path = resolve_path(out_path)
+    resolved_out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(resolved_out_path, dpi=150)
+    plt.close(fig)
+
+
+# --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Build BM25 + dense retrieval indexes over corpus_v1 (T3.5)."
+        description="Build BM25 + dense retrieval indexes over corpus_v1 (T3.5), "
+        "or run the full RQ2 eval against CRAGB v1 (T3.6)."
     )
     parser.add_argument("--config", default="configs/retrieval_eval.yaml")
     parser.add_argument("--smoke-query", default="does this run true to size")
+    parser.add_argument(
+        "--mode",
+        choices=["build", "eval"],
+        default="build",
+        help="'build' (default, T3.5): index both retrievers, smoke-test them, "
+        "write the build report. 'eval' (T3.6): run the full RQ2 comparison "
+        "against CRAGB v1 and write results/tables/retrieval_eval_v1.csv + "
+        "reports/figures/recall_at_k_bm25_vs_dense.png.",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None, help="override config.seed for the eval's bootstrap CIs"
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -302,14 +576,39 @@ def main(argv: list[str] | None = None) -> None:
     corpus = pd.read_parquet(resolve_path(config.corpus_in), columns=["text"])
     logger.info("loaded corpus_in=%s: %d reviews", config.corpus_in, len(corpus))
 
-    built = build_all_retrievers(corpus, config, smoke_query=args.smoke_query)
+    if args.mode == "build":
+        built = build_all_retrievers(corpus, config, smoke_query=args.smoke_query)
 
-    out_path = resolve_path(config.build_report_out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    reports = [report.to_dict() for _retriever, report in built.values()]
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(reports, f, indent=2)
-    logger.info("wrote build report (%d retriever(s)) to %s", len(reports), out_path)
+        out_path = resolve_path(config.build_report_out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        reports = [report.to_dict() for _retriever, report in built.values()]
+        with out_path.open("w", encoding="utf-8") as f:
+            json.dump(reports, f, indent=2)
+        logger.info("wrote build report (%d retriever(s)) to %s", len(reports), out_path)
+        return
+
+    # args.mode == "eval"
+    from cragb.eval.cragb_questions import filter_scorable, load_retrieval_questions
+    from cragb.utils.seeds import set_global_seed
+
+    seed = args.seed if args.seed is not None else config.seed
+    seed_state = set_global_seed(seed)
+
+    questions = filter_scorable(load_retrieval_questions(config.questions_in))
+    logger.info("loaded %s: %d scorable questions", config.questions_in, len(questions))
+
+    rq2_table, _per_question, _build_reports = run_rq2_eval(
+        corpus, config, questions, smoke_query=args.smoke_query, rng=seed_state.numpy_rng
+    )
+
+    table_path = resolve_path("results/tables/retrieval_eval_v1.csv")
+    table_path.parent.mkdir(parents=True, exist_ok=True)
+    rq2_table.to_csv(table_path, index=False)
+    logger.info("wrote RQ2 table (%d rows) to %s", len(rq2_table), table_path)
+
+    fig_path = "reports/figures/recall_at_k_bm25_vs_dense.png"
+    plot_recall_at_k(rq2_table, fig_path)
+    logger.info("wrote Recall@k figure to %s", resolve_path(fig_path))
 
 
 if __name__ == "__main__":

@@ -1,21 +1,24 @@
-"""Unit tests for cragb.eval.run_retrieval_eval (T3.5; M3.md T3.5).
+"""Unit tests for cragb.eval.run_retrieval_eval (T3.5/T3.6; M3.md T3.5/T3.6).
 
-Config loading/validation and the BM25 half of index building run
-unconditionally. The dense half is skipped wherever
-`torch`/`sentence-transformers`/`faiss` aren't importable (this
-project's main Windows environment can't install that stack — PLAN.md
-§14.1; run via `C:\\venv\\cragb\\Scripts\\python.exe` for real dense
-coverage), mirroring the `requires_dense` pattern already established in
-`tests/test_retrieval.py`.
+Config loading/validation, the BM25 half of index building, and
+`score_retriever`/`summarize_metrics`/`compute_significance` (T3.6) run
+unconditionally on BM25-only fixtures. The dense-index and full
+`run_rq2_eval` tests are skipped wherever `torch`/`sentence-transformers`/
+`faiss` aren't importable (this project's main Windows environment can't
+install that stack — PLAN.md §14.1; run via
+`C:\\venv\\cragb\\Scripts\\python.exe` for real dense coverage), mirroring
+the `requires_dense` pattern already established in `tests/test_retrieval.py`.
 """
 
 from __future__ import annotations
 
 import json
 
+import numpy as np
 import pandas as pd
 import pytest
 
+from cragb.eval.cragb_questions import RetrievalQuestion
 from cragb.eval.run_retrieval_eval import (
     DenseRetrieverConfig,
     IndexBuildReport,
@@ -23,7 +26,12 @@ from cragb.eval.run_retrieval_eval import (
     SmokeHit,
     build_all_retrievers,
     build_retriever,
+    compute_significance,
     load_retrieval_eval_config,
+    plot_recall_at_k,
+    run_rq2_eval,
+    score_retriever,
+    summarize_metrics,
 )
 from cragb.retrieval.bm25 import BM25Retriever
 from cragb.retrieval.chunking import ChunkingConfig, chunk_corpus
@@ -218,3 +226,228 @@ class TestBuildAllRetrieversWithDense:
         built = build_all_retrievers(make_corpus(), config, smoke_query="does this run small")
         _retriever, dense_report = built["dense"]
         assert dense_report.device == "cpu"
+
+
+def make_questions() -> list[RetrievalQuestion]:
+    return [
+        RetrievalQuestion(
+            id="fit_q",
+            type="fit_sizing",
+            question="does this run small",
+            is_negative=False,
+            relevant_ids=frozenset({"0"}),
+        ),
+        RetrievalQuestion(
+            id="fabric_q",
+            type="fabric_quality",
+            question="does the fabric hold up after washing",
+            is_negative=False,
+            relevant_ids=frozenset({"1"}),
+        ),
+    ]
+
+
+def identity_chunk_to_parent(corpus: pd.DataFrame) -> dict[str, str]:
+    chunks = chunk_corpus(corpus, ChunkingConfig(scheme="whole_review"))
+    return dict(zip(chunks["chunk_id"], chunks["parent_doc_id"]))
+
+
+class TestScoreRetriever:
+    def test_output_has_one_row_per_question_per_k(self):
+        corpus = make_corpus()
+        chunks = chunk_corpus(corpus, ChunkingConfig(scheme="whole_review"))
+        retriever, _report = build_retriever(
+            "bm25", BM25Retriever(), chunks, smoke_query="does this run small"
+        )
+        result = score_retriever(
+            retriever, identity_chunk_to_parent(corpus), make_questions(), k_values=(1, 2)
+        )
+        assert len(result) == len(make_questions()) * 2
+        assert set(result.columns) == {"question_id", "type", "k", "recall", "hit", "ndcg", "mrr"}
+
+    def test_obviously_relevant_doc_found_at_k1(self):
+        corpus = make_corpus()
+        chunks = chunk_corpus(corpus, ChunkingConfig(scheme="whole_review"))
+        retriever, _report = build_retriever(
+            "bm25", BM25Retriever(), chunks, smoke_query="does this run small"
+        )
+        result = score_retriever(
+            retriever, identity_chunk_to_parent(corpus), make_questions(), k_values=(1,)
+        )
+        fit_row = result.loc[result["question_id"] == "fit_q"].iloc[0]
+        assert fit_row["recall"] == 1.0
+        assert fit_row["hit"] == 1.0
+
+    def test_all_metric_scores_in_valid_range(self):
+        corpus = make_corpus()
+        chunks = chunk_corpus(corpus, ChunkingConfig(scheme="whole_review"))
+        retriever, _report = build_retriever(
+            "bm25", BM25Retriever(), chunks, smoke_query="does this run small"
+        )
+        result = score_retriever(
+            retriever, identity_chunk_to_parent(corpus), make_questions(), k_values=(1, 2, 3)
+        )
+        for metric in ("recall", "hit", "ndcg", "mrr"):
+            assert result[metric].between(0.0, 1.0).all()
+
+
+class TestSummarizeMetrics:
+    def _per_question(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "question_id": ["q1", "q2", "q1", "q2"],
+                "type": ["fit_sizing"] * 4,
+                "k": [1, 1, 3, 3],
+                "recall": [1.0, 0.0, 1.0, 0.5],
+                "hit": [1.0, 0.0, 1.0, 1.0],
+                "ndcg": [1.0, 0.0, 1.0, 0.6],
+                "mrr": [1.0, 0.0, 1.0, 0.5],
+            }
+        )
+
+    def test_columns_and_row_count(self):
+        summary = summarize_metrics(
+            self._per_question(), retriever="bm25", n_boot=500, rng=np.random.default_rng(0)
+        )
+        expected_cols = {"retriever", "k", "n_questions"}
+        for metric in ("recall", "hit", "ndcg", "mrr"):
+            expected_cols |= {f"{metric}_mean", f"{metric}_ci_lo", f"{metric}_ci_hi"}
+        assert set(summary.columns) == expected_cols
+        assert set(summary["k"]) == {1, 3}
+        assert (summary["retriever"] == "bm25").all()
+
+    def test_means_match_manual_average(self):
+        summary = summarize_metrics(
+            self._per_question(), retriever="bm25", n_boot=500, rng=np.random.default_rng(0)
+        )
+        row_k1 = summary.loc[summary["k"] == 1].iloc[0]
+        assert row_k1["recall_mean"] == pytest.approx(0.5)
+        assert row_k1["n_questions"] == 2
+
+
+class TestComputeSignificance:
+    def _per_question(self, recall_values: list[float]) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "question_id": [f"q{i}" for i in range(len(recall_values))],
+                "type": ["fit_sizing"] * len(recall_values),
+                "k": [1] * len(recall_values),
+                "recall": recall_values,
+                "hit": recall_values,
+                "ndcg": recall_values,
+                "mrr": recall_values,
+            }
+        )
+
+    def test_columns_and_row_count(self):
+        bm25 = self._per_question([0.9, 0.1, 0.8, 0.2, 0.95, 0.05, 0.7, 0.3, 0.85, 0.15])
+        dense = self._per_question([0.1, 0.9, 0.2, 0.8, 0.05, 0.95, 0.3, 0.7, 0.15, 0.85])
+        result = compute_significance(bm25, dense, k_values=(1,))
+        assert set(result.columns) == {
+            "k", "recall_wilcoxon_p", "hit_wilcoxon_p", "ndcg_wilcoxon_p", "mrr_wilcoxon_p",
+        }
+        assert len(result) == 1
+
+    def test_p_values_within_valid_range(self):
+        bm25 = self._per_question([0.9, 0.1, 0.8, 0.2, 0.95])
+        dense = self._per_question([0.1, 0.9, 0.2, 0.8, 0.05])
+        result = compute_significance(bm25, dense, k_values=(1,))
+        for metric in ("recall", "hit", "ndcg", "mrr"):
+            assert 0.0 <= result.loc[0, f"{metric}_wilcoxon_p"] <= 1.0
+
+    def test_pairing_is_by_question_id_not_row_order(self):
+        # Shuffle dense's row order relative to bm25's; a naive positional
+        # pairing (rather than a question_id join) would silently compare
+        # the wrong questions against each other.
+        bm25 = self._per_question([1.0, 0.0, 1.0, 0.0])
+        dense = self._per_question([1.0, 0.0, 1.0, 0.0])
+        dense = dense.iloc[::-1].reset_index(drop=True)  # reverse row order
+        result = compute_significance(bm25, dense, k_values=(1,))
+        # identical scores once correctly paired by question_id -> p == 1.0
+        assert result.loc[0, "recall_wilcoxon_p"] == 1.0
+
+    def test_mismatched_question_sets_raise(self):
+        bm25 = self._per_question([1.0, 0.0])
+        dense = pd.DataFrame(
+            {
+                "question_id": ["q0", "q_different"],
+                "type": ["fit_sizing"] * 2,
+                "k": [1, 1],
+                "recall": [1.0, 0.0],
+                "hit": [1.0, 0.0],
+                "ndcg": [1.0, 0.0],
+                "mrr": [1.0, 0.0],
+            }
+        )
+        with pytest.raises(ValueError, match="different questions"):
+            compute_significance(bm25, dense, k_values=(1,))
+
+
+class TestPlotRecallAtK:
+    def _rq2_table(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "retriever": ["bm25", "bm25", "dense", "dense"],
+                "k": [1, 3, 1, 3],
+                "recall_mean": [0.2, 0.4, 0.25, 0.45],
+                "recall_ci_lo": [0.15, 0.35, 0.20, 0.40],
+                "recall_ci_hi": [0.25, 0.45, 0.30, 0.50],
+            }
+        )
+
+    def test_writes_a_nonempty_png(self, tmp_path):
+        out_path = tmp_path / "recall_at_k.png"
+        plot_recall_at_k(self._rq2_table(), out_path)
+        assert out_path.is_file()
+        assert out_path.stat().st_size > 0
+
+
+@requires_dense
+class TestRunRq2Eval:
+    def _config(self, k_values=(1, 2)):
+        return RetrievalEvalConfig(
+            seed=42,
+            corpus_in="data/processed/corpus_v1.parquet",
+            questions_in="benchmark/cragb_v1.jsonl",
+            chunking_config_path="configs/chunking.yaml",
+            k_values=k_values,
+            build_report_out="results/tables/retrieval_index_build_v1.json",
+            dense=DenseRetrieverConfig(model_name="BAAI/bge-small-en-v1.5", batch_size=8, device="cpu"),
+        )
+
+    def test_table_has_one_row_per_retriever_per_k(self):
+        rq2_table, per_question, build_reports = run_rq2_eval(
+            make_corpus(),
+            self._config(),
+            make_questions(),
+            rng=np.random.default_rng(0),
+            show_progress=False,
+        )
+        assert len(rq2_table) == 2 * 2  # 2 retrievers x 2 k values
+        assert set(rq2_table["retriever"]) == {"bm25", "dense"}
+        assert set(build_reports.keys()) == {"bm25", "dense"}
+        assert set(per_question.keys()) == {"bm25", "dense"}
+
+    def test_significance_columns_present_and_valid(self):
+        rq2_table, _per_question, _build_reports = run_rq2_eval(
+            make_corpus(),
+            self._config(),
+            make_questions(),
+            rng=np.random.default_rng(0),
+            show_progress=False,
+        )
+        for metric in ("recall", "hit", "ndcg", "mrr"):
+            col = f"{metric}_wilcoxon_p"
+            assert col in rq2_table.columns
+            assert rq2_table[col].between(0.0, 1.0).all()
+
+    def test_significance_is_identical_across_retriever_rows_at_same_k(self):
+        rq2_table, _per_question, _build_reports = run_rq2_eval(
+            make_corpus(),
+            self._config(),
+            make_questions(),
+            rng=np.random.default_rng(0),
+            show_progress=False,
+        )
+        for k, group in rq2_table.groupby("k"):
+            assert group["recall_wilcoxon_p"].nunique() == 1
