@@ -416,6 +416,47 @@ That guard could never fire. If a citation marker is appended to the phrase, the
 
 **General lesson for future validation/guard code:** when a check's trigger condition is defined by exact equality to a fixed constant, and the thing you're guarding against is "constant + extra content," the guard is structurally unreachable — equality can never hold once anything is appended. Prefer containment, a prefix/suffix check, or restructuring the invariant so the failure mode you're testing for is actually representable by the detection condition. Write the test for the guard *before* trusting it, the way this one was — that's what caught it here, before it ever mattered in production data.
 
+### 14.4 — Groq catalog snapshot for RQ1's "large" model and the answer-quality judge model (M4b T4b.2)
+
+`GET /openai/v1/models` on Groq (2026-08-19, T4b.2 build time) returned only 13 models
+total, most of them not general chat-instruct models at all:
+
+```
+allam-2-7b                          SDAIA        ctx 4096   (Arabic/English, small ctx)
+canopylabs/orpheus-arabic-saudi     Canopy Labs  ctx 4000   (TTS)
+canopylabs/orpheus-v1-english       Canopy Labs  ctx 4000   (TTS)
+groq/compound                       Groq         ctx 131072 (agentic/tool-use compound system)
+groq/compound-mini                  Groq         ctx 131072 (agentic/tool-use compound system)
+meta-llama/llama-prompt-guard-2-22m Meta         ctx 512    (classifier, not chat)
+meta-llama/llama-prompt-guard-2-86m Meta         ctx 512    (classifier, not chat)
+openai/gpt-oss-120b                 OpenAI       ctx 131072
+openai/gpt-oss-20b                  OpenAI       ctx 131072
+openai/gpt-oss-safeguard-20b        OpenAI       ctx 131072 (safety-tuned variant)
+qwen/qwen3.6-27b                    Alibaba      ctx 131072
+whisper-large-v3(-turbo)            OpenAI       (speech-to-text)
+```
+
+**RQ1 "large" model:** `openai/gpt-oss-120b` — same `gpt-oss` family as
+`configs/grounded_qa.yaml`'s `openai/gpt-oss-20b` (20B vs 120B), confirmed live with a
+real completion call. No other same-family size pair exists in this catalog at all,
+which narrows RQ1's model choice to this one rather than being a preference among
+options — `configs/grounded_qa_large.yaml` locks it in.
+
+**Answer-quality judge model (earmarked here for T4b.4, not yet built):** of the
+remaining models, `groq/compound`/`compound-mini` are Groq's own agentic/tool-orchestration
+systems, not plain instruct models — an unpredictable fit for a call that must return one
+deterministic JSON object, not a tool-use trace. `allam-2-7b`'s 4096-token context window
+is too small for a judge prompt carrying the question, context block, candidate answer,
+and reference answer together. That leaves **`qwen/qwen3.6-27b`** — a distinct family
+from `gpt-oss`, so the judge never scores its own family's output on either the RQ0 or
+RQ1 comparison (PLAN.md §9's self-preference-bias caution). One gotcha found testing it:
+by default it emits visible `<think>...</think>` reasoning inline in `content` (unlike
+`gpt-oss`, which hides its reasoning in a separate `usage.completion_tokens_details`
+field and keeps `content` clean) — passing `"reasoning_effort": "none"` in the request
+body suppresses this and returns a bare answer, confirmed with a live call. T4b.4 must
+either set that flag or strip `<think>...</think>` before parsing the judge's JSON, or
+every judge call will fail to parse.
+
 ---
 
 ### Open input needed from you

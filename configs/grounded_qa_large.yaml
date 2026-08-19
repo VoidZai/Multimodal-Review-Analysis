@@ -1,0 +1,56 @@
+# Grounded-QA generation configuration — RQ1 "large" arm (T4b.2; PLAN.md §3 E5, §2 RQ1,
+# M4b.md T4b.2).
+#
+# A copy of configs/grounded_qa.yaml with exactly one field changed: provider.model. RQ1
+# asks whether LLM scale improves answer quality *given the same retrieved context*
+# (PLAN.md §2), de-confounded by holding everything except model size fixed: "model size
+# within one family, same API | controls: retriever, k, prompt". Every field below other
+# than provider.model is therefore intentionally identical to grounded_qa.yaml — retrieval
+# (bm25, k=5, same chunking config), prompt template, cache dir, corpus/questions paths.
+# If any of those ever drift between the two files, RQ1 stops being a controlled
+# comparison, so keep them in lockstep by construction (copy, don't hand-edit twice).
+#
+# Model choice: openai/gpt-oss-120b — same "gpt-oss" family as configs/grounded_qa.yaml's
+# openai/gpt-oss-20b (20B vs 120B), both confirmed live on Groq's catalog
+# (GET /openai/v1/models) at T4b.2 build time (2026-08-19). See PLAN.md §14.4 for the full
+# catalog snapshot and why no other size pair in the same family exists on Groq right now.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+  questions_in: benchmark/cragb_v1.jsonl
+  prompt_template: src/cragb/generate/prompts/grounded_qa_v1.md
+  cache_dir: results/cache/api
+  # Deliberately not reused by T4b.2's batch driver as the run's actual
+  # output path (cragb.eval.run_answer_generation writes to
+  # results/tables/answer_gen_rag_large_v1.jsonl instead, per M4b.md's
+  # artifact list) — kept here only so this config stays a complete,
+  # standalone drop-in for configs/grounded_qa.yaml's CLI
+  # (`python -m cragb.generate.grounded_qa --config
+  # configs/grounded_qa_large.yaml --question-ids ...`), same as that
+  # module's own pilot runs.
+  transcripts_out: results/tables/grounded_qa_transcripts_large_v1.jsonl
+  validity_out: results/tables/grounded_qa_validity_large_v1.csv
+  validity_per_question_out: results/tables/grounded_qa_validity_per_question_large_v1.csv
+
+provider:
+  name: groq
+  model: openai/gpt-oss-120b
+  api_base: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  temperature: 0.2
+  # Same reasoning-model caveat as grounded_qa.yaml: gpt-oss-120b's
+  # hidden chain-of-thought is billed as completion_tokens under this
+  # same cap. Kept at the identical 1200 value grounded_qa.yaml already
+  # validated empirically, rather than re-deriving a separate budget for
+  # the larger model — if the 120b model needs more, that will surface
+  # as empty answers in T4b.2's row-count validation, not silently.
+  max_tokens: 1200
+  timeout_s: 30
+  max_retries: 5
+
+retrieval:
+  retriever: bm25
+  k: 5
+  chunking_config: configs/chunking.yaml
