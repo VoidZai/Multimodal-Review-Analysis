@@ -1,0 +1,634 @@
+[
+  {
+    "question_id": "colour_appearance_006",
+    "type": "colour_appearance",
+    "question": "Are there any reviews that discuss how the product's color changes in different lighting conditions?",
+    "k": 5,
+    "relevant_ids": [
+      "47004",
+      "61018",
+      "75274",
+      "102131",
+      "107528",
+      "171235"
+    ],
+    "winner": "bm25",
+    "bm25_recall": 0.6666666666666666,
+    "dense_recall": 0.0,
+    "bm25_hits": [
+      {
+        "doc_id": "171235",
+        "score": 26.9444,
+        "snippet": "Beautiful, delicate necklace and chain. Light, airy. The stones (says they're real) sparkle nicely in different lighting conditions. The chain is the right length to show off this gorgeous trinity kno",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "61018",
+        "score": 23.0771,
+        "snippet": "I ordered these earrings because I was attracted to the mosaic colors. They came nicely packaged with a soft cloth. They appear substantial and well made. Unfortunately, I was disappointed in the lack",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "124005",
+        "score": 22.6691,
+        "snippet": "This is a great headband. The color I received looks like pink lemonade. The fabric is very soft and won't damage hair in any way. It's ideal for curly hair. There are instructions included that tell ",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "75274",
+        "score": 21.5219,
+        "snippet": "This tie changes character in different lighting in a very nice way, from midnight to baby blue with just the right sheen. The textures are detailed and evident but not jumping off the tie. Material s",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "47004",
+        "score": 21.4538,
+        "snippet": "I have the “Ice Blue Beads” color of the Alex and Ani Splendid Beaded Expandable Bangle. I like this color because it looks different depending on how the light hits it. Under natural lighting, the be",
+        "is_relevant": true
+      }
+    ],
+    "dense_hits": [
+      {
+        "doc_id": "186910",
+        "score": 0.7564,
+        "snippet": "I bought 2. A darker/brighter on and a softer colored one. It is a lighter shade in pastels to the brighter colored one. I thought they were patterned differently. The pictures showed them folded or d",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "167340",
+        "score": 0.7499,
+        "snippet": "Product is excellent, but the colors come alittle bit different from advertised!",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "169256",
+        "score": 0.7471,
+        "snippet": "Definitely, color is an issue should have waited and purchased the lighter neutral color. Will wait for colder weather for a more comprehensive review.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "22288",
+        "score": 0.7453,
+        "snippet": "It's aight. Not what I thought it was gone be. Ion be out at night so want get to enjoy color changing.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "197015",
+        "score": 0.7351,
+        "snippet": "I do like the product overall but I am extremely disappointed with the actual color. I purchased the pink and turquoise set. The blue isn’t vivid at all (as depicted in the pictures). Instead it’s a d",
+        "is_relevant": false
+      }
+    ]
+  },
+  {
+    "question_id": "colour_appearance_neg_000",
+    "type": "colour_appearance",
+    "question": "Does the dye lot number affect the shade of colour received?",
+    "k": 5,
+    "relevant_ids": [
+      "28047",
+      "134904"
+    ],
+    "winner": "bm25",
+    "bm25_recall": 0.5,
+    "dense_recall": 0.0,
+    "bm25_hits": [
+      {
+        "doc_id": "83691",
+        "score": 26.7727,
+        "snippet": "It does fit but the colour is completely different from the picture here it is a lot more fuschia and almost neon colour like orange even not flattering at all. Not wearing this probably ever, maybe j",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "90174",
+        "score": 26.6518,
+        "snippet": "These are very nice and long. I love the vivid colour. The only thing I didn't care for was the strong odor, which I'm sure was the dye. The smell did wash out.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "105003",
+        "score": 25.6679,
+        "snippet": "These area so very comfortable and fits very nicely. No toe pinch or rub. TBN the colour in my picture is different than the stock picture, however the colour of the shoe is exactly as pictured in the",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "3036",
+        "score": 25.6529,
+        "snippet": "Received the wrong colour twice from the seller, so I returned them both. Had I not been keen on the colour sent to me, I would have kept them. They are incredibly squishy and soft.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "28047",
+        "score": 25.0452,
+        "snippet": "One shoe changes colour more than the other does.",
+        "is_relevant": true
+      }
+    ],
+    "dense_hits": [
+      {
+        "doc_id": "191558",
+        "score": 0.733,
+        "snippet": "Buying a bunch if colors.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "7610",
+        "score": 0.731,
+        "snippet": "rings changed colors",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "63699",
+        "score": 0.73,
+        "snippet": "I purchased 3 packages of 8 panties. I was sent packages containing three panties. While the total number sent is correct, this is not what I ordered. In a package of 8 there will be a greater variety",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "167340",
+        "score": 0.7278,
+        "snippet": "Product is excellent, but the colors come alittle bit different from advertised!",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "119078",
+        "score": 0.7277,
+        "snippet": "Does not file as expected but nice color",
+        "is_relevant": false
+      }
+    ]
+  },
+  {
+    "question_id": "fit_sizing_neg_000",
+    "type": "fit_sizing",
+    "question": "Do buyers report the exact chest measurement in inches for the size medium?",
+    "k": 5,
+    "relevant_ids": [
+      "47706",
+      "110475",
+      "116514",
+      "125710"
+    ],
+    "winner": "bm25",
+    "bm25_recall": 0.5,
+    "dense_recall": 0.0,
+    "bm25_hits": [
+      {
+        "doc_id": "41628",
+        "score": 30.1288,
+        "snippet": "The fit is really off. The body is slightly fitted. The chest measurement on a large is 21 inches. The sleeve opening is too wide. It measures 7 1/2 inches on the large. You need Popeye arms for this ",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "17016",
+        "score": 27.895,
+        "snippet": "This lounge undershirt from ATTI TUDE is very soft. It makes a great base layer or a comfortable shirt to wear around the house and to bed. The modal fabric sort of hugs your body, so the shirt moves ",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "116514",
+        "score": 26.9565,
+        "snippet": "This base layer set comes in a nylon zipper pouch that you could reuse to keep the set in a backpack or to pack it down for traveling. When I took the set out of the pouch, I was worried the shirt and",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "37161",
+        "score": 26.7343,
+        "snippet": "The sizing information in the product listing is completely wrong. I normally wear a 44L jacket. The second picture in the product listing indicates that for size XL, chest is 50.8 inches, length is 2",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "47706",
+        "score": 26.6936,
+        "snippet": "First of all, I love the lingerie set. The lace material isn't a bother and it compliments the body quite well. I did order the medium size and the fit was a bit on the loose side. Most likely going t",
+        "is_relevant": true
+      }
+    ],
+    "dense_hits": [
+      {
+        "doc_id": "12416",
+        "score": 0.7673,
+        "snippet": "Bought a medium within the specified chest dimension , what I got is way too small, you would have to be severely anorexic to fit in it",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "52525",
+        "score": 0.7568,
+        "snippet": "I order an x-large and I believe it was miss labeled and it was a medium. The refund process was great.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "33401",
+        "score": 0.7468,
+        "snippet": "Falsifying the size it didn’t measure what it says on the website",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "176528",
+        "score": 0.7379,
+        "snippet": "I received the correct size however it was WAY smaller than advertised",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "68453",
+        "score": 0.7368,
+        "snippet": "I'm a 34 and it says I should purchase Mediums, so I did. They're too small.",
+        "is_relevant": false
+      }
+    ]
+  },
+  {
+    "question_id": "durability_neg_000",
+    "type": "durability",
+    "question": "How many wash cycles on average does the product survive under controlled lab testing?",
+    "k": 5,
+    "relevant_ids": [
+      "78415",
+      "93761",
+      "121719",
+      "187723"
+    ],
+    "winner": "bm25",
+    "bm25_recall": 0.5,
+    "dense_recall": 0.0,
+    "bm25_hits": [
+      {
+        "doc_id": "191398",
+        "score": 24.6339,
+        "snippet": "This product did not survive a single washing. Threads through the waist unraveled and garroted other clothes in the wash.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "147473",
+        "score": 21.3618,
+        "snippet": "These socks are super comfortable! They are perfect for wearing around the house during the winter. The creatures are so cute and adorable. The socks also fit perfectly and can survive many washes. I ",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "78415",
+        "score": 20.3104,
+        "snippet": "Authentic Pigment makes the absolute best t shirts. No fade whatsoever for about 50 wash cycles.",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "150901",
+        "score": 19.6449,
+        "snippet": "The fit is good - not too baggy or restrictive. the support is average. very soft to touch, no riding up or bunching. seems to more breathable than Reebok, Columbia and Champion (though I like the Cha",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "93761",
+        "score": 18.6329,
+        "snippet": "They fit well and arrived quickly, I wash in cold water and the blue one still looks good, but the black is noticably faded after less than 10 cycles.",
+        "is_relevant": true
+      }
+    ],
+    "dense_hits": [
+      {
+        "doc_id": "3896",
+        "score": 0.7206,
+        "snippet": "We will see how long they last after washing them for 3 to 6 months",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "55127",
+        "score": 0.7194,
+        "snippet": "Holding up well after multiple washings.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "27799",
+        "score": 0.7194,
+        "snippet": "Holding up well after multiple washings.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "119035",
+        "score": 0.7163,
+        "snippet": "Hold up well in the wash",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "65553",
+        "score": 0.7126,
+        "snippet": "So far it’s washed well and held up",
+        "is_relevant": false
+      }
+    ]
+  },
+  {
+    "question_id": "defects_neg_001",
+    "type": "defects",
+    "question": "Do buyers report the specific factory batch number associated with defective units?",
+    "k": 5,
+    "relevant_ids": [
+      "117931"
+    ],
+    "winner": "dense",
+    "bm25_recall": 0.0,
+    "dense_recall": 1.0,
+    "bm25_hits": [
+      {
+        "doc_id": "182748",
+        "score": 19.4131,
+        "snippet": "Defective, it has a large 8&#34; faded ring all the way around the top of the Beret. Why do we keep receiving defective merchandise !",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "110899",
+        "score": 18.7002,
+        "snippet": "The sheepskin inside one of the slippers is defective. It is clumped, with a ball of clump, and misshapen. This is now the second defective pair I received. I will not trying a third. I do not recomme",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "17998",
+        "score": 17.7359,
+        "snippet": "Socks with non slip properties, but not the best, but neither the worst. Sorry for the inconclusive report, it is just that they do not excelled, neither fail in their anti skid duties.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "117466",
+        "score": 17.6782,
+        "snippet": "Really disappointed with the appearance of the Firelily in black leather. As another reviewer mentioned, the front of the shoes looks scuffed. The overall pattern seems flawed in the front of both sho",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "175995",
+        "score": 17.4839,
+        "snippet": "I like the soft feel of the bangle and tassels though it is large and impractical for a key ring unless it was for a specific purpose, like laundry room keys, etc. The fringed tassel is perfect though",
+        "is_relevant": false
+      }
+    ],
+    "dense_hits": [
+      {
+        "doc_id": "20772",
+        "score": 0.7082,
+        "snippet": "Wrong measurement from Factory",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "131204",
+        "score": 0.7081,
+        "snippet": "I’ve purchased many 505s in the past but these seem to have been mislabeled",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "193820",
+        "score": 0.701,
+        "snippet": "Just cannot seem to trust whether these are counterfeit, defective, factory 2nds, or actual Levi's anymore. My Levi's when ordered online too often have flaws: improper fit, bad zipper, 5 belt loops i",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "117931",
+        "score": 0.6903,
+        "snippet": "I ordered these twice. The first one was give N go as advertised. When the second batch arrived it was labeled give N go 2.0. The 2.0 according to other reviews has not had a good rating. I like the o",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "147902",
+        "score": 0.6886,
+        "snippet": "Ordered small and shipped large. Although Amazon shipped the correct produce, I retain the negative review as I have recently received 2 wrong products and 1 that didn't work. This is not the Amazon I",
+        "is_relevant": false
+      }
+    ]
+  },
+  {
+    "question_id": "occasion_neg_000",
+    "type": "occasion",
+    "question": "Is this item officially licensed or endorsed for use at professional sporting events?",
+    "k": 5,
+    "relevant_ids": [
+      "83107",
+      "173986"
+    ],
+    "winner": "dense",
+    "bm25_recall": 0.0,
+    "dense_recall": 0.5,
+    "bm25_hits": [
+      {
+        "doc_id": "120269",
+        "score": 23.0449,
+        "snippet": "Love this top! I typically wear it to sporting events or just running around doing errands. It's comfy & fits well.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "26122",
+        "score": 20.205,
+        "snippet": "Good quality for the price. Works well for stadium, concert and sporting events. Just the right size for small wallet, cell phone & sunglasses.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "44057",
+        "score": 20.0755,
+        "snippet": "I love to use tote bags and this one is really cute! I like the see through quality of it. While the product description says that this can be used for sporting events, it's too large for most of the ",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "76910",
+        "score": 16.9904,
+        "snippet": "What's not to love?<br />It's a belt with a bear on the buckle, holds your pants or trousers up (sparing you embarrassment of possibly being bear back, bad pun, but I had to), the price is reasonable ",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "19384",
+        "score": 16.7215,
+        "snippet": "I was very pleased with this product. The material is thick, high quality, and felt like a professional chef. It was comfortable to wear all day while I made Thanksgiving dinner. Made for a great memo",
+        "is_relevant": false
+      }
+    ],
+    "dense_hits": [
+      {
+        "doc_id": "106505",
+        "score": 0.7073,
+        "snippet": "Its good for going to sporting events. They won't let any bag that isn't clear. I can fit a jacket and some smaller stuff in there. It's pretty cheap though. The rope already came untied after a few u",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "135939",
+        "score": 0.6854,
+        "snippet": "Since public venues are now so security conscious, I was looking for a clear tote bag to use should we ever go to a baseball game or large event where clear bags are required. This is made of a nice h",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "173986",
+        "score": 0.6821,
+        "snippet": "Counterfeit item not really FOX Racing",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "163660",
+        "score": 0.681,
+        "snippet": "This product was perfect for my athletes. Baseball and football players and they loved it. Great value for the money.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "177203",
+        "score": 0.6796,
+        "snippet": "I use this bag for stadium use. It is clear so they can see what is inside.",
+        "is_relevant": false
+      }
+    ]
+  },
+  {
+    "question_id": "defects_005",
+    "type": "defects",
+    "question": "Are there any complaints about defects or damage to the packaging?",
+    "k": 5,
+    "relevant_ids": [
+      "3574",
+      "42696",
+      "57010",
+      "65646",
+      "74543",
+      "125294",
+      "140332",
+      "150678",
+      "164069",
+      "171382"
+    ],
+    "winner": "dense",
+    "bm25_recall": 0.1,
+    "dense_recall": 0.5,
+    "bm25_hits": [
+      {
+        "doc_id": "114050",
+        "score": 19.5408,
+        "snippet": "After replacing the first pair (the right boot squeaked relentlessly) I now have a functional pair of these boots. There was no hassle or complaints about the exchange. The boots I currently have are ",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "90760",
+        "score": 19.3092,
+        "snippet": "Super cute and comfy! They seem true to size (it's hard to find a 10.5 so I'm happy about that)<br />The only complaint I have is the mildew on the boots, I mean... WTH?? It cleaned up just fine thoug",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "193494",
+        "score": 19.2336,
+        "snippet": "sturdy and pretty but some black keys are scratched or faded. the lid covers the defects, though.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "66445",
+        "score": 18.5844,
+        "snippet": "Favorite brand of shoe. I can generally always count on their fit. I have and have had a least a dozen pairs of different styles over the years. Ordered the 8.5 2E. They fit perfectly. Comfy. I have w",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "57010",
+        "score": 18.2964,
+        "snippet": "Product works as intended, but nothing about the product or packaging was too interesting",
+        "is_relevant": true
+      }
+    ],
+    "dense_hits": [
+      {
+        "doc_id": "171382",
+        "score": 0.7658,
+        "snippet": "Produced arrived cracked even though box seemed fine.",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "125294",
+        "score": 0.7612,
+        "snippet": "The product itself is not bad. It keeps my ear warm even when the weather is below 0 Fahrenheit. However, the packaging needs extra work to be good. It looked like used when it arrived and that shaken",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "3574",
+        "score": 0.7588,
+        "snippet": "Item pretty decent, as expected but packaging....not sure. Is this how it’s supposed to be or has this been repacked? Used and returned item???",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "140332",
+        "score": 0.7586,
+        "snippet": "We open the package with a glue on it. Damaged before use",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "150678",
+        "score": 0.755,
+        "snippet": "OK, a little cheaply made and box had some damage, but item was not damaged",
+        "is_relevant": true
+      }
+    ]
+  },
+  {
+    "question_id": "colour_appearance_010",
+    "type": "colour_appearance",
+    "question": "Do reviewers mention any issues with the color being uneven or inconsistent?",
+    "k": 5,
+    "relevant_ids": [
+      "59714",
+      "69704",
+      "195703"
+    ],
+    "winner": "dense",
+    "bm25_recall": 0.0,
+    "dense_recall": 0.3333333333333333,
+    "bm25_hits": [
+      {
+        "doc_id": "105388",
+        "score": 22.779,
+        "snippet": "I agree with other reviewers that the sizing on these shoes is inconsistent. I ordered 2 pairs, 1 leather and the other canvas. The leather pair fits fine and I am wearing them. The canvas pair in the",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "85990",
+        "score": 22.0813,
+        "snippet": "The straps of these shoes are way too wide you practically slip off them if you do any walking on uneven ground or cobbelstones.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "11674",
+        "score": 21.1135,
+        "snippet": "I am a pretty standard medium and these felt more like a small especially in the waist. Otherwise they are well made and comfortable. My recommendation is to size up. Unlike other reviewers, I didn't ",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "186699",
+        "score": 20.9655,
+        "snippet": "The shirts are really thin and the graphics are very light, bordering on faded-looking. The hems are uneven, being longer at the sides than front or back. And even though it is listed as having free r",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "25768",
+        "score": 20.8956,
+        "snippet": "This hoodie is lightweight and works well for hot weather. It feel soft, comfortable, cool on the skin. I like the fit and feel of the sweatshirt.<br /><br />Other reviewers have flagged issues with t",
+        "is_relevant": false
+      }
+    ],
+    "dense_hits": [
+      {
+        "doc_id": "113041",
+        "score": 0.772,
+        "snippet": "Reviewers seem happy with normal colors…I expected the top to have the color I chose and shiny texture as shown, did not, returned. (Pon?)",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "169256",
+        "score": 0.759,
+        "snippet": "Definitely, color is an issue should have waited and purchased the lighter neutral color. Will wait for colder weather for a more comprehensive review.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "195703",
+        "score": 0.744,
+        "snippet": "Looks good but it’s fading maybe mine is defective I don’t know",
+        "is_relevant": true
+      },
+      {
+        "doc_id": "68680",
+        "score": 0.7406,
+        "snippet": "The quality wasn’t what I was hoping for but the color and size was right.",
+        "is_relevant": false
+      },
+      {
+        "doc_id": "134096",
+        "score": 0.7403,
+        "snippet": "The colors didn’t match what I wanted it to",
+        "is_relevant": false
+      }
+    ]
+  }
+]

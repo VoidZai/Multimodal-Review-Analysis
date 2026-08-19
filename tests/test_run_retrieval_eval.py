@@ -25,17 +25,22 @@ from cragb.eval.cragb_questions import RetrievalQuestion
 from cragb.eval.run_retrieval_eval import (
     DenseRetrieverConfig,
     IndexBuildReport,
+    RankedHit,
     RetrievalEvalConfig,
     SmokeHit,
+    WinLossExample,
     build_all_retrievers,
     build_retriever,
     compute_significance,
+    fetch_winloss_examples,
     h2_interaction_summary,
     load_retrieval_eval_config,
     plot_recall_at_k,
     plot_recall_per_type,
+    render_winloss_markdown,
     run_rq2_eval,
     score_retriever,
+    select_winloss_questions,
     summarize_metrics,
     summarize_recall_by_type,
 )
@@ -608,3 +613,202 @@ class TestPlotRecallPerType:
         plot_recall_per_type(self._by_type_table(), out_path, k=5)
         assert out_path.is_file()
         assert out_path.stat().st_size > 0
+
+
+def write_per_question_csv(tmp_path, rows: list[dict]):
+    path = tmp_path / "per_question.csv"
+    pd.DataFrame(rows).to_csv(path, index=False)
+    return path
+
+
+def make_retrieval_questions() -> list[RetrievalQuestion]:
+    return [
+        RetrievalQuestion("q_bm25_big", "fit_sizing", "q1?", False, frozenset({"1"})),
+        RetrievalQuestion("q_bm25_small", "fit_sizing", "q2?", False, frozenset({"1"})),
+        RetrievalQuestion("q_dense_big", "colour_appearance", "q3?", False, frozenset({"1"})),
+        RetrievalQuestion("q_dense_small", "colour_appearance", "q4?", False, frozenset({"1"})),
+        RetrievalQuestion("q_tie", "value", "q5?", False, frozenset({"1"})),
+    ]
+
+
+class TestSelectWinlossQuestions:
+    def _rows(self) -> list[dict]:
+        # (question_id, bm25_recall, dense_recall) at k=5:
+        #   q_bm25_big:   1.0 vs 0.0  -> bm25 win, margin 1.0
+        #   q_bm25_small: 0.6 vs 0.4  -> bm25 win, margin 0.2
+        #   q_dense_big:  0.0 vs 1.0  -> dense win, margin -1.0
+        #   q_dense_small:0.4 vs 0.6  -> dense win, margin -0.2
+        #   q_tie:        0.5 vs 0.5  -> excluded
+        specs = [
+            ("q_bm25_big", 1.0, 0.0),
+            ("q_bm25_small", 0.6, 0.4),
+            ("q_dense_big", 0.0, 1.0),
+            ("q_dense_small", 0.4, 0.6),
+            ("q_tie", 0.5, 0.5),
+        ]
+        rows = []
+        for question_id, bm25_recall, dense_recall in specs:
+            rows.append({"question_id": question_id, "type": "x", "k": 5, "recall": bm25_recall, "retriever": "bm25"})
+            rows.append({"question_id": question_id, "type": "x", "k": 5, "recall": dense_recall, "retriever": "dense"})
+        return rows
+
+    def test_ties_are_excluded(self, tmp_path):
+        path = write_per_question_csv(tmp_path, self._rows())
+        selected = select_winloss_questions(path, make_retrieval_questions(), k=5, n_per_direction=4)
+        assert "q_tie" not in [q.id for q, _w, _b, _d in selected]
+
+    def test_bm25_wins_come_first_ordered_by_margin(self, tmp_path):
+        path = write_per_question_csv(tmp_path, self._rows())
+        selected = select_winloss_questions(path, make_retrieval_questions(), k=5, n_per_direction=4)
+        bm25_wins = [(q.id, winner) for q, winner, _b, _d in selected if winner == "bm25"]
+        assert [qid for qid, _ in bm25_wins] == ["q_bm25_big", "q_bm25_small"]
+
+    def test_dense_wins_ordered_by_margin(self, tmp_path):
+        path = write_per_question_csv(tmp_path, self._rows())
+        selected = select_winloss_questions(path, make_retrieval_questions(), k=5, n_per_direction=4)
+        dense_wins = [q.id for q, winner, _b, _d in selected if winner == "dense"]
+        assert dense_wins == ["q_dense_big", "q_dense_small"]
+
+    def test_n_per_direction_caps_selection(self, tmp_path):
+        path = write_per_question_csv(tmp_path, self._rows())
+        selected = select_winloss_questions(path, make_retrieval_questions(), k=5, n_per_direction=1)
+        assert len(selected) == 2  # 1 bm25 win + 1 dense win
+
+    def test_bm25_dense_recall_values_carried_through(self, tmp_path):
+        path = write_per_question_csv(tmp_path, self._rows())
+        selected = select_winloss_questions(path, make_retrieval_questions(), k=5, n_per_direction=4)
+        by_id = {q.id: (b, d) for q, _w, b, d in selected}
+        assert by_id["q_bm25_big"] == (1.0, 0.0)
+        assert by_id["q_dense_small"] == (0.4, 0.6)
+
+    def test_unknown_question_id_raises_keyerror(self, tmp_path):
+        rows = [
+            {"question_id": "not_in_questions", "type": "x", "k": 5, "recall": 1.0, "retriever": "bm25"},
+            {"question_id": "not_in_questions", "type": "x", "k": 5, "recall": 0.0, "retriever": "dense"},
+        ]
+        path = write_per_question_csv(tmp_path, rows)
+        with pytest.raises(KeyError, match="not found"):
+            select_winloss_questions(path, make_retrieval_questions(), k=5, n_per_direction=4)
+
+
+class TestRankedHitRoundTrip:
+    def test_to_dict_from_dict_round_trip(self):
+        hit = RankedHit(doc_id="42", score=0.987, snippet="great fit", is_relevant=True)
+        restored = RankedHit.from_dict(hit.to_dict())
+        assert restored == hit
+
+
+class TestWinLossExampleRoundTrip:
+    def _example(self) -> WinLossExample:
+        return WinLossExample(
+            question_id="fit_sizing_000",
+            type="fit_sizing",
+            question="does this run small?",
+            k=5,
+            relevant_ids=("1", "2"),
+            winner="bm25",
+            bm25_recall=1.0,
+            dense_recall=0.5,
+            bm25_hits=(RankedHit("1", 1.2, "runs small", True),),
+            dense_hits=(RankedHit("3", 0.8, "unrelated", False),),
+        )
+
+    def test_to_dict_is_json_serializable(self):
+        json.dumps(self._example().to_dict())
+
+    def test_to_dict_from_dict_round_trip(self):
+        example = self._example()
+        restored = WinLossExample.from_dict(example.to_dict())
+        assert restored == example
+
+
+class TestRenderWinlossMarkdown:
+    def _examples(self) -> list[WinLossExample]:
+        return [
+            WinLossExample(
+                question_id="fit_sizing_000",
+                type="fit_sizing",
+                question="does this run small?",
+                k=5,
+                relevant_ids=("1", "2"),
+                winner="bm25",
+                bm25_recall=1.0,
+                dense_recall=0.0,
+                bm25_hits=(RankedHit("1", 1.2, "runs small, size up", True),),
+                dense_hits=(RankedHit("9", 0.8, "unrelated review", False),),
+            ),
+            WinLossExample(
+                question_id="colour_appearance_000",
+                type="colour_appearance",
+                question="is the colour as pictured?",
+                k=5,
+                relevant_ids=("3",),
+                winner="dense",
+                bm25_recall=0.0,
+                dense_recall=1.0,
+                bm25_hits=(RankedHit("9", 0.8, "unrelated review", False),),
+                dense_hits=(RankedHit("3", 0.9, "colour matched exactly", True),),
+            ),
+        ]
+
+    def test_contains_both_section_headers(self):
+        md = render_winloss_markdown(self._examples())
+        assert "## BM25 wins, dense loses" in md
+        assert "## Dense wins, BM25 loses" in md
+
+    def test_contains_question_ids_and_checkmarks(self):
+        md = render_winloss_markdown(self._examples())
+        assert "fit_sizing_000" in md
+        assert "colour_appearance_000" in md
+        assert "✅" in md
+        assert "❌" in md
+
+    def test_missing_why_gets_placeholder(self):
+        md = render_winloss_markdown(self._examples())
+        assert "interpretation pending manual review" in md
+
+    def test_supplied_why_is_used_instead_of_placeholder(self):
+        md = render_winloss_markdown(
+            self._examples(), why_by_question_id={"fit_sizing_000": "BM25 matched the exact phrase."}
+        )
+        assert "BM25 matched the exact phrase." in md
+
+    def test_empty_examples_list_does_not_crash(self):
+        md = render_winloss_markdown([])
+        assert "BM25 wins, dense loses" in md
+
+
+@requires_dense
+class TestFetchWinlossExamples:
+    def _config(self):
+        return RetrievalEvalConfig(
+            seed=42,
+            corpus_in="data/processed/corpus_v1.parquet",
+            questions_in="benchmark/cragb_v1.jsonl",
+            chunking_config_path="configs/chunking.yaml",
+            k_values=(1, 3, 5, 10),
+            build_report_out="results/tables/retrieval_index_build_v1.json",
+            dense=DenseRetrieverConfig(model_name="BAAI/bge-small-en-v1.5", batch_size=8, device="cpu"),
+        )
+
+    def test_fetches_real_hits_for_each_selected_question(self):
+        corpus = make_corpus()
+        selected = [
+            (make_questions()[0], "bm25", 1.0, 0.0),
+            (make_questions()[1], "dense", 0.0, 1.0),
+        ]
+        examples = fetch_winloss_examples(corpus, self._config(), selected, k=2)
+        assert len(examples) == 2
+        assert examples[0].winner == "bm25"
+        assert examples[1].winner == "dense"
+        for example in examples:
+            assert len(example.bm25_hits) > 0
+            assert len(example.dense_hits) > 0
+
+    def test_relevance_flags_are_correct(self):
+        corpus = make_corpus()
+        selected = [(make_questions()[0], "bm25", 1.0, 0.0)]  # relevant_ids={"0"}
+        examples = fetch_winloss_examples(corpus, self._config(), selected, k=3)
+        example = examples[0]
+        for hit in example.bm25_hits:
+            assert hit.is_relevant == (hit.doc_id in example.relevant_ids)

@@ -1,10 +1,10 @@
-"""Retrieval eval harness: config, index build, RQ2 eval, per-type breakdown
-(T3.5/T3.6/T3.7; PLAN.md §3 E3).
+"""Retrieval eval harness: config, index build, RQ2 eval, per-type breakdown,
+qualitative win/loss examples (T3.5/T3.6/T3.7/T3.8; PLAN.md §3 E3).
 
-Three stages, all in this one module (T3.5's docstring committed to
+Four stages, all in this one module (T3.5's docstring committed to
 adding T3.6 here rather than a new file, since both share this module's
-config and indexes; T3.7 follows the same reasoning — it only consumes
-T3.6's output, so it belongs alongside it):
+config and indexes; T3.7/T3.8 follow the same reasoning — each only
+consumes an earlier stage's output, so each belongs alongside it):
 
 - **Index build (T3.5):** `build_retriever`/`build_all_retrievers` chunk
   `corpus_v1` under T3.4's locked scheme, index BM25 and dense, and
@@ -27,6 +27,18 @@ T3.6's output, so it belongs alongside it):
   `main(mode="by-type")` needs neither the corpus nor either index — it
   reads T3.6's already-computed per-question CSV directly, so it never
   touches the GPU or the dense stack at all.
+- **Win/loss examples (T3.8):** `select_winloss_questions`/
+  `fetch_winloss_examples`/`render_winloss_markdown` pick the most
+  lopsided BM25-wins and dense-wins questions (from T3.6's per-question
+  CSV), re-query both indexes for just those questions to get real
+  ranked hits with text snippets, and render them as the appendix
+  material `reports/retrieval_winloss_examples.md` is built from
+  (PLAN.md §7: "3–5 retrieval win/loss pairs each way"). `main(mode="winloss")`
+  writes the underlying facts (question, gold ids, both retrievers' real
+  top-k hits, which hits are actually relevant) as JSON — deliberately
+  *not* the final prose, since a one-line "why this retriever won" is an
+  interpretive judgment a human should write after reading the real
+  hits, not text a template should invent.
 
 Windows note (PLAN.md §14.1): `DenseRetriever` needs `torch` +
 `sentence-transformers` + `faiss`, which fail to install into this
@@ -690,24 +702,302 @@ def plot_recall_per_type(by_type_table: pd.DataFrame, out_path: str | Path, k: i
 
 
 # --------------------------------------------------------------------------
+# Qualitative win/loss examples (T3.8)
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RankedHit:
+    """One retriever's ranked hit for a win/loss example, with its relevance known."""
+
+    doc_id: str
+    score: float
+    snippet: str
+    is_relevant: bool
+
+    def to_dict(self) -> dict:
+        return {
+            "doc_id": self.doc_id,
+            "score": round(self.score, 4),
+            "snippet": self.snippet,
+            "is_relevant": self.is_relevant,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "RankedHit":
+        return cls(doc_id=d["doc_id"], score=d["score"], snippet=d["snippet"], is_relevant=d["is_relevant"])
+
+
+@dataclass(frozen=True)
+class WinLossExample:
+    """One question picked because the two retrievers disagreed sharply on it."""
+
+    question_id: str
+    type: str
+    question: str
+    k: int
+    relevant_ids: tuple[str, ...]
+    winner: str  # "bm25" or "dense"
+    bm25_recall: float
+    dense_recall: float
+    bm25_hits: tuple[RankedHit, ...]
+    dense_hits: tuple[RankedHit, ...]
+
+    def to_dict(self) -> dict:
+        return {
+            "question_id": self.question_id,
+            "type": self.type,
+            "question": self.question,
+            "k": self.k,
+            "relevant_ids": list(self.relevant_ids),
+            "winner": self.winner,
+            "bm25_recall": self.bm25_recall,
+            "dense_recall": self.dense_recall,
+            "bm25_hits": [h.to_dict() for h in self.bm25_hits],
+            "dense_hits": [h.to_dict() for h in self.dense_hits],
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "WinLossExample":
+        return cls(
+            question_id=d["question_id"],
+            type=d["type"],
+            question=d["question"],
+            k=d["k"],
+            relevant_ids=tuple(d["relevant_ids"]),
+            winner=d["winner"],
+            bm25_recall=d["bm25_recall"],
+            dense_recall=d["dense_recall"],
+            bm25_hits=tuple(RankedHit.from_dict(h) for h in d["bm25_hits"]),
+            dense_hits=tuple(RankedHit.from_dict(h) for h in d["dense_hits"]),
+        )
+
+
+def select_winloss_questions(
+    per_question_path: str | Path,
+    questions: list[RetrievalQuestion],
+    k: int = 5,
+    n_per_direction: int = 4,
+) -> list[tuple[RetrievalQuestion, str, float, float]]:
+    """Pick the most lopsided BM25-wins and dense-wins questions at `k`.
+
+    "Lopsided" is Recall@`k` margin: `bm25_recall - dense_recall` for a
+    BM25 win, the reverse for a dense win. Exact ties (equal recall) are
+    excluded — a win/loss example needs an actual disagreement to be
+    worth showing.
+
+    Args:
+        per_question_path: path to T3.6's per-question CSV
+            (`results/tables/retrieval_eval_per_question_v1.csv`),
+            columns `[question_id, type, k, recall, hit, ndcg, mrr, retriever]`.
+        questions: the full CRAGB question set (unfiltered is fine —
+            only ids that appear in `per_question_path` are looked up),
+            used to recover each selected question's text and gold
+            `relevant_ids` (not present in the per-question CSV).
+        k: the `k` to rank margins at.
+        n_per_direction: how many examples to pick in each direction
+            (PLAN.md §7 asks for "3-5... each way").
+
+    Returns:
+        Up to `2 * n_per_direction` tuples
+        `(question, winner, bm25_recall, dense_recall)`, BM25 wins first
+        (largest margin first), then dense wins (largest margin first).
+
+    Raises:
+        KeyError: if a selected `question_id` isn't found in `questions`
+            — indicates the two inputs came from different CRAGB
+            versions.
+    """
+    per_question = pd.read_csv(resolve_path(per_question_path))
+    df_k = per_question.loc[per_question["k"] == k]
+    pivot = df_k.pivot(index="question_id", columns="retriever", values="recall")
+    pivot["diff"] = pivot["bm25"] - pivot["dense"]
+    pivot = pivot.loc[pivot["diff"] != 0]
+
+    questions_by_id = {q.id: q for q in questions}
+
+    def _lookup(question_id: str) -> RetrievalQuestion:
+        try:
+            return questions_by_id[question_id]
+        except KeyError as exc:
+            raise KeyError(
+                f"question_id {question_id!r} from {per_question_path} not found in "
+                "the supplied `questions` list."
+            ) from exc
+
+    # Sign, not just magnitude, decides which direction a row belongs to:
+    # sorting the *whole* (already tie-free) pivot by diff and taking
+    # `.head(n)`/`.tail(n)` would, whenever fewer than `n` genuine wins
+    # exist in one direction, silently backfill with rows that actually
+    # favor the *other* retriever — mislabeling a dense win as a BM25
+    # win. Filtering to the correct sign first makes that impossible.
+    bm25_wins = pivot.loc[pivot["diff"] > 0].sort_values("diff", ascending=False).head(n_per_direction)
+    dense_wins = pivot.loc[pivot["diff"] < 0].sort_values("diff", ascending=True).head(n_per_direction)
+
+    selected: list[tuple[RetrievalQuestion, str, float, float]] = []
+    for question_id, row in bm25_wins.iterrows():
+        selected.append((_lookup(question_id), "bm25", float(row["bm25"]), float(row["dense"])))
+    for question_id, row in dense_wins.iterrows():
+        selected.append((_lookup(question_id), "dense", float(row["bm25"]), float(row["dense"])))
+    return selected
+
+
+def fetch_winloss_examples(
+    corpus: pd.DataFrame,
+    config: RetrievalEvalConfig,
+    selected: list[tuple[RetrievalQuestion, str, float, float]],
+    k: int = 5,
+    smoke_query: str = "does this run true to size",
+) -> list[WinLossExample]:
+    """Build both indexes and re-query them for each selected win/loss question.
+
+    T3.6's per-question CSV only has scores, not the actual ranked
+    hits/snippets a reader needs to see *why* one retriever won — this
+    re-runs the two real, indexed retrievers against just the selected
+    questions (a handful, not all 58) to recover that.
+
+    Args:
+        corpus: `corpus_v1`-shaped DataFrame.
+        config: a `RetrievalEvalConfig`.
+        selected: output of `select_winloss_questions`.
+        k: top-k hits to fetch per retriever per question.
+        smoke_query: forwarded to `build_all_retrievers`.
+
+    Returns:
+        One `WinLossExample` per `selected` entry, in the same order.
+    """
+    built = build_all_retrievers(corpus, config, smoke_query=smoke_query)
+
+    chunking_config = load_chunking_config(config.chunking_config_path)
+    chunks = chunk_corpus(corpus, chunking_config)
+    chunk_to_parent = dict(zip(chunks["chunk_id"], chunks["parent_doc_id"]))
+    text_by_chunk_id = dict(zip(chunks["chunk_id"], chunks["text"]))
+
+    examples: list[WinLossExample] = []
+    for question, winner, bm25_recall, dense_recall in selected:
+        hits_by_retriever: dict[str, tuple[RankedHit, ...]] = {}
+        for name, (retriever, _report) in built.items():
+            raw_hits = retriever.search(question.question, k=k)
+            ranked_parents = collapse_chunk_ranking_to_parents(
+                [hit.doc_id for hit in raw_hits], chunk_to_parent
+            )
+            score_by_chunk_id = {hit.doc_id: hit.score for hit in raw_hits}
+            # first chunk id whose parent matches, per parent, to look up a
+            # score/snippet for the (possibly collapsed) parent-level hit
+            first_chunk_by_parent: dict[str, str] = {}
+            for hit in raw_hits:
+                parent_id = chunk_to_parent[hit.doc_id]
+                first_chunk_by_parent.setdefault(parent_id, hit.doc_id)
+
+            hits_by_retriever[name] = tuple(
+                RankedHit(
+                    doc_id=parent_id,
+                    score=score_by_chunk_id[first_chunk_by_parent[parent_id]],
+                    snippet=text_by_chunk_id[first_chunk_by_parent[parent_id]][:200],
+                    is_relevant=parent_id in question.relevant_ids,
+                )
+                for parent_id in ranked_parents
+            )
+
+        examples.append(
+            WinLossExample(
+                question_id=question.id,
+                type=question.type,
+                question=question.question,
+                k=k,
+                relevant_ids=tuple(sorted(question.relevant_ids, key=int)),
+                winner=winner,
+                bm25_recall=bm25_recall,
+                dense_recall=dense_recall,
+                bm25_hits=hits_by_retriever["bm25"],
+                dense_hits=hits_by_retriever["dense"],
+            )
+        )
+    return examples
+
+
+def render_winloss_markdown(
+    examples: list[WinLossExample],
+    why_by_question_id: dict[str, str] | None = None,
+) -> str:
+    """Render `examples` as the `reports/retrieval_winloss_examples.md` appendix material.
+
+    Args:
+        examples: output of `fetch_winloss_examples`.
+        why_by_question_id: an optional one-line, human-authored
+            explanation per `question_id` (why the winning retriever
+            won) — deliberately not auto-generated (see module
+            docstring). A question without an entry gets a placeholder
+            line instead of a fabricated explanation.
+
+    Returns:
+        Complete Markdown document text.
+    """
+    why_by_question_id = why_by_question_id or {}
+    bm25_wins = [e for e in examples if e.winner == "bm25"]
+    dense_wins = [e for e in examples if e.winner == "dense"]
+
+    lines = [
+        "# Retrieval win/loss examples (T3.8; PLAN.md §7 appendix)",
+        "",
+        "Questions where BM25 and dense retrieval disagreed sharply on "
+        f"Recall@{examples[0].k if examples else '?'} (CRAGB v1). ✅ marks a "
+        "hit that is actually in the question's pooled `relevant_ids`; ❌ marks "
+        "a hit that is not.",
+        "",
+    ]
+
+    for section_title, group in (
+        ("BM25 wins, dense loses", bm25_wins),
+        ("Dense wins, BM25 loses", dense_wins),
+    ):
+        lines.append(f"## {section_title}")
+        lines.append("")
+        for example in group:
+            lines.append(f"### `{example.question_id}` ({example.type})")
+            lines.append(f"**Q:** {example.question}")
+            lines.append("")
+            lines.append(
+                f"Recall@{example.k}: BM25={example.bm25_recall:.2f}, "
+                f"dense={example.dense_recall:.2f} — gold relevant ids: "
+                f"{', '.join(example.relevant_ids)}"
+            )
+            lines.append("")
+            for retriever_name, hits in (("BM25", example.bm25_hits), ("Dense", example.dense_hits)):
+                lines.append(f"**{retriever_name} top-{example.k}:**")
+                for hit in hits:
+                    mark = "✅" if hit.is_relevant else "❌"
+                    lines.append(f"- {mark} `{hit.doc_id}` (score {hit.score:.3f}): {hit.snippet}")
+                lines.append("")
+            why = why_by_question_id.get(
+                example.question_id, "_(interpretation pending manual review)_"
+            )
+            lines.append(f"**Why:** {why}")
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
 
 
 _PER_QUESTION_PATH = "results/tables/retrieval_eval_per_question_v1.csv"
+_WINLOSS_RAW_PATH = "results/tables/retrieval_winloss_examples_v1.json"
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Build BM25 + dense retrieval indexes over corpus_v1 (T3.5), "
-        "run the full RQ2 eval against CRAGB v1 (T3.6), or slice it by question "
-        "type (T3.7)."
+        "run the full RQ2 eval against CRAGB v1 (T3.6), slice it by question type "
+        "(T3.7), or select qualitative win/loss examples (T3.8)."
     )
     parser.add_argument("--config", default="configs/retrieval_eval.yaml")
     parser.add_argument("--smoke-query", default="does this run true to size")
     parser.add_argument(
         "--mode",
-        choices=["build", "eval", "by-type"],
+        choices=["build", "eval", "by-type", "winloss"],
         default="build",
         help="'build' (default, T3.5): index both retrievers, smoke-test them, "
         "write the build report. 'eval' (T3.6): run the full RQ2 comparison "
@@ -717,7 +1007,13 @@ def main(argv: list[str] | None = None) -> None:
         "type and write results/tables/retrieval_eval_by_type_v1.csv + "
         "reports/figures/recall_per_type.png — reads "
         f"{_PER_QUESTION_PATH} directly, so it needs neither the corpus, an "
-        "index, nor the GPU (run 'eval' first).",
+        "index, nor the GPU (run 'eval' first). 'winloss' (T3.8): pick the most "
+        "lopsided BM25-wins/dense-wins questions from T3.6's per-question output, "
+        f"re-query both indexes for just those, and write {_WINLOSS_RAW_PATH} "
+        "(raw facts — question, gold ids, real top-k hits per retriever; run "
+        "'eval' first). The final prose (`reports/retrieval_winloss_examples.md`) "
+        "is rendered separately from that JSON via render_winloss_markdown, once "
+        "a human has written the one-line 'why' per example.",
     )
     parser.add_argument(
         "--seed", type=int, default=None, help="override config.seed for bootstrap CIs"
@@ -726,8 +1022,15 @@ def main(argv: list[str] | None = None) -> None:
         "--k",
         type=int,
         default=5,
-        help="k to slice the per-type breakdown at (mode=by-type only; PLAN.md "
-        "§7's headline k)",
+        help="k for the by-type breakdown or the winloss examples (PLAN.md §7's "
+        "headline k)",
+    )
+    parser.add_argument(
+        "--n-per-direction",
+        type=int,
+        default=4,
+        help="winloss mode only: how many BM25-wins and dense-wins examples to "
+        "select (PLAN.md §7 asks for 3-5 each way)",
     )
     args = parser.parse_args(argv)
 
@@ -790,34 +1093,71 @@ def main(argv: list[str] | None = None) -> None:
         logger.info("wrote build report (%d retriever(s)) to %s", len(reports), out_path)
         return
 
-    # args.mode == "eval"
-    from cragb.eval.cragb_questions import filter_scorable, load_retrieval_questions
+    if args.mode == "eval":
+        from cragb.eval.cragb_questions import filter_scorable, load_retrieval_questions
 
-    questions = filter_scorable(load_retrieval_questions(config.questions_in))
-    logger.info("loaded %s: %d scorable questions", config.questions_in, len(questions))
+        questions = filter_scorable(load_retrieval_questions(config.questions_in))
+        logger.info("loaded %s: %d scorable questions", config.questions_in, len(questions))
 
-    rq2_table, per_question, _build_reports = run_rq2_eval(
-        corpus, config, questions, smoke_query=args.smoke_query, rng=seed_state.numpy_rng
-    )
+        rq2_table, per_question, _build_reports = run_rq2_eval(
+            corpus, config, questions, smoke_query=args.smoke_query, rng=seed_state.numpy_rng
+        )
 
-    table_path = resolve_path("results/tables/retrieval_eval_v1.csv")
-    table_path.parent.mkdir(parents=True, exist_ok=True)
-    rq2_table.to_csv(table_path, index=False)
-    logger.info("wrote RQ2 table (%d rows) to %s", len(rq2_table), table_path)
+        table_path = resolve_path("results/tables/retrieval_eval_v1.csv")
+        table_path.parent.mkdir(parents=True, exist_ok=True)
+        rq2_table.to_csv(table_path, index=False)
+        logger.info("wrote RQ2 table (%d rows) to %s", len(rq2_table), table_path)
 
-    per_question_combined = pd.concat(
-        [df.assign(retriever=name) for name, df in per_question.items()], ignore_index=True
-    )
+        per_question_combined = pd.concat(
+            [df.assign(retriever=name) for name, df in per_question.items()], ignore_index=True
+        )
+        per_question_path = resolve_path(_PER_QUESTION_PATH)
+        per_question_path.parent.mkdir(parents=True, exist_ok=True)
+        per_question_combined.to_csv(per_question_path, index=False)
+        logger.info(
+            "wrote per-question scores (%d rows) to %s",
+            len(per_question_combined),
+            per_question_path,
+        )
+
+        fig_path = "reports/figures/recall_at_k_bm25_vs_dense.png"
+        plot_recall_at_k(rq2_table, fig_path)
+        logger.info("wrote Recall@k figure to %s", resolve_path(fig_path))
+        return
+
+    # args.mode == "winloss"
+    from cragb.eval.cragb_questions import load_retrieval_questions
+
     per_question_path = resolve_path(_PER_QUESTION_PATH)
-    per_question_path.parent.mkdir(parents=True, exist_ok=True)
-    per_question_combined.to_csv(per_question_path, index=False)
+    if not per_question_path.is_file():
+        raise FileNotFoundError(
+            f"{per_question_path} not found; run `--mode eval` first (T3.6) to "
+            "produce per-question scores before selecting win/loss examples (T3.8)."
+        )
+
+    all_questions = load_retrieval_questions(config.questions_in)
+    selected = select_winloss_questions(
+        per_question_path, all_questions, k=args.k, n_per_direction=args.n_per_direction
+    )
+    n_bm25_wins = sum(1 for _q, winner, _b, _d in selected if winner == "bm25")
+    n_dense_wins = len(selected) - n_bm25_wins
     logger.info(
-        "wrote per-question scores (%d rows) to %s", len(per_question_combined), per_question_path
+        "selected %d win/loss examples at k=%d (%d bm25 wins, %d dense wins)",
+        len(selected),
+        args.k,
+        n_bm25_wins,
+        n_dense_wins,
     )
 
-    fig_path = "reports/figures/recall_at_k_bm25_vs_dense.png"
-    plot_recall_at_k(rq2_table, fig_path)
-    logger.info("wrote Recall@k figure to %s", resolve_path(fig_path))
+    examples = fetch_winloss_examples(
+        corpus, config, selected, k=args.k, smoke_query=args.smoke_query
+    )
+
+    raw_path = resolve_path(_WINLOSS_RAW_PATH)
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    with raw_path.open("w", encoding="utf-8") as f:
+        json.dump([e.to_dict() for e in examples], f, indent=2, ensure_ascii=False)
+    logger.info("wrote %d win/loss examples (raw facts) to %s", len(examples), raw_path)
 
 
 if __name__ == "__main__":
