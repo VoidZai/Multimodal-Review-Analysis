@@ -25,14 +25,26 @@ paths:
 
 provider:
   name: groq
-  model: llama-3.1-8b-instant
+  # llama-3.1-8b-instant (used by T2.2's configs/generate.yaml) has since
+  # been deprecated from Groq's catalogue (PLAN.md §1.4 bottleneck #3:
+  # "API rate limits / drift... model deprecations" — confirmed via
+  # GET /openai/v1/models on 2026-08-19, T4a.1 build time). gpt-oss-20b
+  # is a current, fast instruct model in the same "small/free-tier" class.
+  model: openai/gpt-oss-20b
   api_base: https://api.groq.com/openai/v1
   api_key_env: GROQ_API_KEY
   # Low temperature: this call must reproduce grounding/citation
   # discipline reliably, not produce varied creative phrasing the way
   # T2.2's question-drafting call (temperature 0.7) wants.
   temperature: 0.2
-  max_tokens: 500
+  # gpt-oss-20b is a reasoning model: on Groq, its hidden chain-of-thought
+  # is billed as `completion_tokens` alongside the visible answer, under
+  # the same `max_tokens` cap (confirmed empirically at T4a.3 build time —
+  # a 500-token cap against this prompt's ~2.6k-char context produced an
+  # *empty* visible answer, all budget spent on reasoning before any
+  # content token). 1200 leaves headroom for both on every CRAGB question
+  # tried so far (~400-480 completion tokens total).
+  max_tokens: 1200
   timeout_s: 30
   max_retries: 5
 
