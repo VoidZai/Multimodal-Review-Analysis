@@ -1,0 +1,46 @@
+# Grounded-QA generation configuration (T4a.1; PLAN.md §3 E4, M4a.md T4a.1).
+#
+# Citation convention note (deviates from PLAN.md §3 E4's literal "[R#]" sketch):
+# the human reference answers built in T2.8 (`cragb.bench.reference_answers`) already
+# cite evidence as `[doc_id]` directly and abstain with a fixed `ABSTENTION_TEXT`
+# constant. Rather than inventing a parallel `[R#]`-indexed scheme that would need an
+# id-map translation layer just to get back to the same doc_ids, this prompt cites
+# `[doc_id]` directly (and `[photo of doc_id]` for photo evidence) so T4a.4's
+# citation-validity checker can reuse `cragb.bench.reference_answers.extract_citations`
+# and `ABSTENTION_TEXT` as-is instead of reimplementing them.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+  questions_in: benchmark/cragb_v1.jsonl
+  prompt_template: src/cragb/generate/prompts/grounded_qa_v1.md
+  # API responses are cached here keyed on the full request payload (same
+  # cache cragb.generate.api_cache.DiskCache uses everywhere else in the
+  # project), so a re-run never re-spends free-tier quota on a question
+  # already answered.
+  cache_dir: results/cache/api
+  transcripts_out: results/tables/grounded_qa_transcripts_v1.jsonl
+  validity_out: results/tables/grounded_qa_validity_v1.csv
+
+provider:
+  name: groq
+  model: llama-3.1-8b-instant
+  api_base: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  # Low temperature: this call must reproduce grounding/citation
+  # discipline reliably, not produce varied creative phrasing the way
+  # T2.2's question-drafting call (temperature 0.7) wants.
+  temperature: 0.2
+  max_tokens: 500
+  timeout_s: 30
+  max_retries: 5
+
+retrieval:
+  # BM25 only for M4a: it needs no GPU/venv (PLAN.md §14.1) and M3 already
+  # validated it as a competitive retriever. Swapping in the dense
+  # retriever later is a one-line config change once T4a.2's
+  # context_builder is written against the shared `Retriever` interface.
+  retriever: bm25
+  k: 5
+  chunking_config: configs/chunking.yaml
