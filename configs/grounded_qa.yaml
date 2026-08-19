@@ -21,7 +21,11 @@ paths:
   # already answered.
   cache_dir: results/cache/api
   transcripts_out: results/tables/grounded_qa_transcripts_v1.jsonl
+  # One-row aggregate headline metrics table (T4a.4's `summarize`).
   validity_out: results/tables/grounded_qa_validity_v1.csv
+  # Per-question breakdown (T4a.4's `per_question_dataframe`) underneath
+  # the aggregate row — the row-level detail T4a.6's appendix picks from.
+  validity_per_question_out: results/tables/grounded_qa_validity_per_question_v1.csv
 
 provider:
   name: groq

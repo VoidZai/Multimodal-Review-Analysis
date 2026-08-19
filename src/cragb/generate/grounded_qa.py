@@ -226,6 +226,47 @@ def write_transcripts_jsonl(transcripts: list[GroundedQATranscript], out_path: s
     return resolved
 
 
+def load_transcripts_jsonl(path: str | Path) -> list[GroundedQATranscript]:
+    """Load transcripts written by `write_transcripts_jsonl`, reconstructing each `ContextBlock`.
+
+    The inverse of `GroundedQATranscript.to_dict`/`write_transcripts_jsonl` — used by
+    T4a.6's appendix renderer to read T4a.5's pilot output back without re-running any
+    retrieval or generation.
+
+    Args:
+        path: a transcripts JSONL file (e.g.
+            `results/tables/grounded_qa_transcripts_v1.jsonl`).
+
+    Returns:
+        One `GroundedQATranscript` per line, in file order.
+    """
+    transcripts = []
+    with resolve_path(path).open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            obj = json.loads(line)
+            context = ContextBlock(
+                text=obj["context_text"],
+                doc_ids=tuple(obj["context_doc_ids"]),
+                photo_flags=obj["context_photo_flags"],
+            )
+            transcripts.append(
+                GroundedQATranscript(
+                    question_id=obj["question_id"],
+                    question=obj["question"],
+                    context=context,
+                    raw_completion=obj["raw_completion"],
+                    answer_text=obj["answer_text"],
+                    cited_doc_ids=tuple(obj["cited_doc_ids"]),
+                    cited_photo_ids=tuple(obj["cited_photo_ids"]),
+                    abstained=obj["abstained"],
+                )
+            )
+    return transcripts
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="configs/grounded_qa.yaml", help="Path to grounded-QA config YAML.")

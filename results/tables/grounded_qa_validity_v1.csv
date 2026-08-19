@@ -1,0 +1,2 @@
+n_questions,format_compliance_rate,citation_validity_rate,gold_grounding_rate,abstention_accuracy,self_contradiction_rate,ungrounded_answer_rate,n_total_citations,n_fabricated_citations
+11,1.0,1.0,1.0,1.0,0.0,0.0,33,0

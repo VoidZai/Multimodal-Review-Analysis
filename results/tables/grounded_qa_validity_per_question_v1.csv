@@ -1,0 +1,12 @@
+question_id,format_compliant,malformed_citations,n_citations,fabricated_citations,citation_validity_rate,n_grounded_in_gold,ungrounded_in_gold,predicted_abstained,expected_abstained,abstention_correct,self_contradiction,ungrounded_answer
+fabric_quality_neg_000,True,[],0,[],,0,[],True,True,True,False,False
+defects_neg_000,True,[],0,[],,0,[],True,True,True,False,False
+fit_sizing_neg_001,True,[],4,[],1.0,4,[],False,False,True,False,False
+durability_neg_000,True,[],1,[],1.0,1,[],False,False,True,False,False
+fit_sizing_000,True,[],5,[],1.0,5,[],False,False,True,False,False
+colour_appearance_009,True,[],3,[],1.0,3,[],False,False,True,False,False
+fabric_quality_000,True,[],3,[],1.0,3,[],False,False,True,False,False
+durability_000,True,[],5,[],1.0,5,[],False,False,True,False,False
+defects_000,True,[],2,[],1.0,2,[],False,False,True,False,False
+occasion_000,True,[],5,[],1.0,5,[],False,False,True,False,False
+value_000,True,[],5,[],1.0,5,[],False,False,True,False,False
