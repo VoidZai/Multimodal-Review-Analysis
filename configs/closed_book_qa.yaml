@@ -1,0 +1,40 @@
+# Closed-book baseline configuration (T4b.1; PLAN.md §3 E5, M4b.md T4b.1).
+#
+# This is the RQ0 "no retrieval" arm: the same question CRAGB asks, with no retrieved
+# review context at all. The only thing that should differ from the RAG-small arm
+# (`configs/grounded_qa.yaml`) is the *presence of context* — so `provider.model` here is
+# pinned to match `grounded_qa.yaml`'s model exactly. If that config's model ever changes
+# (e.g. another Groq deprecation, PLAN.md §1.4 bottleneck #3), update this one to match in
+# the same commit, or RQ0 silently stops being a controlled comparison.
+
+seed: 42
+
+paths:
+  questions_in: benchmark/cragb_v1.jsonl
+  prompt_template: src/cragb/generate/prompts/closed_book_qa_v1.md
+  # Same disk cache every other API-calling module in this project uses
+  # (cragb.generate.api_cache.DiskCache) — keyed on the full request
+  # payload, so a re-run never re-spends free-tier quota.
+  cache_dir: results/cache/api
+  transcripts_out: results/tables/answer_gen_closed_book_v1.jsonl
+
+provider:
+  name: groq
+  # Must match configs/grounded_qa.yaml's model — see module docstring.
+  model: openai/gpt-oss-20b
+  api_base: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  # Low temperature: this arm's honesty (abstain when it can't know
+  # something) needs to be reliable, not creative, mirroring
+  # grounded_qa.yaml's rationale for the same setting.
+  temperature: 0.2
+  # gpt-oss-20b is a reasoning model: its hidden chain-of-thought is
+  # billed as completion_tokens under the same max_tokens cap
+  # (grounded_qa.yaml's comment records this being confirmed empirically
+  # at T4a.1 build time). This prompt is much shorter than the grounded
+  # one (no context block), but the model still reasons before answering,
+  # so the same generous headroom is kept here rather than assuming a
+  # shorter prompt needs a smaller budget.
+  max_tokens: 1200
+  timeout_s: 30
+  max_retries: 5
