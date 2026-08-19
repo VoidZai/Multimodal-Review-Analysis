@@ -1,4 +1,4 @@
-"""Unit tests for cragb.eval.run_retrieval_eval (T3.5/T3.6; M3.md T3.5/T3.6).
+"""Unit tests for cragb.eval.run_retrieval_eval (T3.5/T3.6/T3.7; M3.md T3.5/T3.6/T3.7).
 
 Config loading/validation, the BM25 half of index building, and
 `score_retriever`/`summarize_metrics`/`compute_significance` (T3.6) run
@@ -8,6 +8,9 @@ unconditionally on BM25-only fixtures. The dense-index and full
 install that stack — PLAN.md §14.1; run via
 `C:\\venv\\cragb\\Scripts\\python.exe` for real dense coverage), mirroring
 the `requires_dense` pattern already established in `tests/test_retrieval.py`.
+T3.7's `summarize_recall_by_type`/`h2_interaction_summary`/`plot_recall_per_type`
+consume already-computed per-question DataFrames, so they need neither
+retriever and run unconditionally too.
 """
 
 from __future__ import annotations
@@ -27,11 +30,14 @@ from cragb.eval.run_retrieval_eval import (
     build_all_retrievers,
     build_retriever,
     compute_significance,
+    h2_interaction_summary,
     load_retrieval_eval_config,
     plot_recall_at_k,
+    plot_recall_per_type,
     run_rq2_eval,
     score_retriever,
     summarize_metrics,
+    summarize_recall_by_type,
 )
 from cragb.retrieval.bm25 import BM25Retriever
 from cragb.retrieval.chunking import ChunkingConfig, chunk_corpus
@@ -451,3 +457,154 @@ class TestRunRq2Eval:
         )
         for k, group in rq2_table.groupby("k"):
             assert group["recall_wilcoxon_p"].nunique() == 1
+
+
+def make_per_question_by_type(recall_by_type_and_retriever: dict) -> dict[str, pd.DataFrame]:
+    """Build synthetic {"bm25": df, "dense": df} per-question fixtures.
+
+    `recall_by_type_and_retriever` example:
+        {"fit_sizing": {"bm25": [1.0, 0.0, 1.0], "dense": [0.0, 0.0, 1.0]},
+         "colour_appearance": {"bm25": [0.0, 0.0], "dense": [1.0, 1.0]}}
+    Every question gets a unique id and k=5, matching what
+    `score_retriever`'s real output looks like.
+    """
+    rows_by_retriever: dict[str, list[dict[str, object]]] = {"bm25": [], "dense": []}
+    counter = 0
+    for qtype, by_retriever in recall_by_type_and_retriever.items():
+        n = len(next(iter(by_retriever.values())))
+        for i in range(n):
+            question_id = f"{qtype}_{i}_{counter}"
+            counter += 1
+            for retriever, values in by_retriever.items():
+                rows_by_retriever[retriever].append(
+                    {"question_id": question_id, "type": qtype, "k": 5, "recall": values[i]}
+                )
+    return {name: pd.DataFrame(rows) for name, rows in rows_by_retriever.items()}
+
+
+class TestSummarizeRecallByType:
+    def test_columns_and_one_row_per_retriever_per_type(self):
+        per_question = make_per_question_by_type(
+            {
+                "fit_sizing": {"bm25": [1.0, 0.0, 1.0], "dense": [0.0, 0.0, 1.0]},
+                "colour_appearance": {"bm25": [0.0, 0.0], "dense": [1.0, 1.0]},
+            }
+        )
+        table = summarize_recall_by_type(per_question, k=5, n_boot=500, rng=np.random.default_rng(0))
+        assert set(table.columns) == {
+            "retriever", "type", "k", "recall_mean", "recall_ci_lo", "recall_ci_hi", "n_questions",
+        }
+        assert len(table) == 2 * 2  # 2 retrievers x 2 types
+        assert (table["k"] == 5).all()
+
+    def test_recall_means_match_manual_averages(self):
+        per_question = make_per_question_by_type(
+            {"fit_sizing": {"bm25": [1.0, 0.0, 1.0], "dense": [0.0, 0.0, 1.0]}}
+        )
+        table = summarize_recall_by_type(per_question, k=5, n_boot=500, rng=np.random.default_rng(0))
+        bm25_row = table.loc[(table["retriever"] == "bm25") & (table["type"] == "fit_sizing")].iloc[0]
+        dense_row = table.loc[(table["retriever"] == "dense") & (table["type"] == "fit_sizing")].iloc[0]
+        assert bm25_row["recall_mean"] == pytest.approx(2 / 3)
+        assert dense_row["recall_mean"] == pytest.approx(1 / 3)
+        assert bm25_row["n_questions"] == 3
+
+    def test_every_type_present_for_every_retriever(self):
+        per_question = make_per_question_by_type(
+            {
+                "fit_sizing": {"bm25": [1.0], "dense": [0.0]},
+                "colour_appearance": {"bm25": [0.0], "dense": [1.0]},
+                "durability": {"bm25": [0.5], "dense": [0.5]},
+            }
+        )
+        table = summarize_recall_by_type(per_question, k=5, n_boot=500, rng=np.random.default_rng(0))
+        for retriever in ("bm25", "dense"):
+            types_present = set(table.loc[table["retriever"] == retriever, "type"])
+            assert types_present == {"fit_sizing", "colour_appearance", "durability"}
+
+    def test_missing_k_raises(self):
+        per_question = make_per_question_by_type({"fit_sizing": {"bm25": [1.0], "dense": [0.0]}})
+        with pytest.raises(ValueError, match="k=10 not found"):
+            summarize_recall_by_type(per_question, k=10, n_boot=500)
+
+
+class TestH2InteractionSummary:
+    def test_identifies_bm25_leader(self):
+        by_type_table = pd.DataFrame(
+            {
+                "retriever": ["bm25", "dense"],
+                "type": ["fit_sizing", "fit_sizing"],
+                "k": [5, 5],
+                "recall_mean": [0.8, 0.3],
+                "recall_ci_lo": [0.7, 0.2],
+                "recall_ci_hi": [0.9, 0.4],
+                "n_questions": [10, 10],
+            }
+        )
+        result = h2_interaction_summary(by_type_table)
+        assert result.loc[result["type"] == "fit_sizing", "leader"].iloc[0] == "bm25"
+
+    def test_identifies_dense_leader(self):
+        by_type_table = pd.DataFrame(
+            {
+                "retriever": ["bm25", "dense"],
+                "type": ["colour_appearance", "colour_appearance"],
+                "k": [5, 5],
+                "recall_mean": [0.2, 0.7],
+                "recall_ci_lo": [0.1, 0.6],
+                "recall_ci_hi": [0.3, 0.8],
+                "n_questions": [10, 10],
+            }
+        )
+        result = h2_interaction_summary(by_type_table)
+        assert result.loc[result["type"] == "colour_appearance", "leader"].iloc[0] == "dense"
+
+    def test_identifies_tie(self):
+        by_type_table = pd.DataFrame(
+            {
+                "retriever": ["bm25", "dense"],
+                "type": ["value", "value"],
+                "k": [5, 5],
+                "recall_mean": [0.5, 0.5],
+                "recall_ci_lo": [0.4, 0.4],
+                "recall_ci_hi": [0.6, 0.6],
+                "n_questions": [10, 10],
+            }
+        )
+        result = h2_interaction_summary(by_type_table)
+        assert result.loc[result["type"] == "value", "leader"].iloc[0] == "tie"
+
+    def test_output_columns(self):
+        by_type_table = pd.DataFrame(
+            {
+                "retriever": ["bm25", "dense"],
+                "type": ["value", "value"],
+                "k": [5, 5],
+                "recall_mean": [0.5, 0.6],
+                "recall_ci_lo": [0.4, 0.5],
+                "recall_ci_hi": [0.6, 0.7],
+                "n_questions": [10, 10],
+            }
+        )
+        result = h2_interaction_summary(by_type_table)
+        assert list(result.columns) == ["type", "bm25_recall_mean", "dense_recall_mean", "leader"]
+
+
+class TestPlotRecallPerType:
+    def _by_type_table(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "retriever": ["bm25", "dense", "bm25", "dense"],
+                "type": ["fit_sizing", "fit_sizing", "colour_appearance", "colour_appearance"],
+                "k": [5, 5, 5, 5],
+                "recall_mean": [0.3, 0.35, 0.4, 0.2],
+                "recall_ci_lo": [0.2, 0.25, 0.3, 0.1],
+                "recall_ci_hi": [0.4, 0.45, 0.5, 0.3],
+                "n_questions": [10, 10, 8, 8],
+            }
+        )
+
+    def test_writes_a_nonempty_png(self, tmp_path):
+        out_path = tmp_path / "recall_per_type.png"
+        plot_recall_per_type(self._by_type_table(), out_path, k=5)
+        assert out_path.is_file()
+        assert out_path.stat().st_size > 0

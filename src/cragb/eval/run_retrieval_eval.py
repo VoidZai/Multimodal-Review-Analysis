@@ -1,8 +1,10 @@
-"""Retrieval eval harness: config, index build, and RQ2 eval run (T3.5/T3.6; PLAN.md §3 E3).
+"""Retrieval eval harness: config, index build, RQ2 eval, per-type breakdown
+(T3.5/T3.6/T3.7; PLAN.md §3 E3).
 
-Two stages, both in this one module (T3.5's docstring committed to
+Three stages, all in this one module (T3.5's docstring committed to
 adding T3.6 here rather than a new file, since both share this module's
-config and indexes):
+config and indexes; T3.7 follows the same reasoning — it only consumes
+T3.6's output, so it belongs alongside it):
 
 - **Index build (T3.5):** `build_retriever`/`build_all_retrievers` chunk
   `corpus_v1` under T3.4's locked scheme, index BM25 and dense, and
@@ -14,7 +16,17 @@ config and indexes):
   nDCG/MRR (`cragb.eval.metrics_retrieval`) with bootstrap 95% CIs
   (`cragb.eval.bootstrap`) and a paired Wilcoxon significance test
   between BM25 and dense at each `k` — the headline RQ2 table and
-  figure (PLAN.md §7).
+  figure (PLAN.md §7). `main(mode="eval")` also persists the raw
+  per-question scores (`results/tables/retrieval_eval_per_question_v1.csv`)
+  so T3.7 can slice them without ever rebuilding an index.
+- **Per-type breakdown (T3.7):** `summarize_recall_by_type`/
+  `h2_interaction_summary`/`plot_recall_per_type` slice T3.6's per-question
+  scores by CRAGB's question `type` to test H2 (PLAN.md §2: dense should
+  win paraphrased/semantic questions, BM25 competitive-or-better on
+  lexical/attribute questions — no global winner, an *interaction*).
+  `main(mode="by-type")` needs neither the corpus nor either index — it
+  reads T3.6's already-computed per-question CSV directly, so it never
+  touches the GPU or the dense stack at all.
 
 Windows note (PLAN.md §14.1): `DenseRetriever` needs `torch` +
 `sentence-transformers` + `faiss`, which fail to install into this
@@ -545,34 +557,225 @@ def plot_recall_at_k(rq2_table: pd.DataFrame, out_path: str | Path) -> None:
 
 
 # --------------------------------------------------------------------------
+# Per-question-type breakdown (T3.7)
+# --------------------------------------------------------------------------
+
+
+def summarize_recall_by_type(
+    per_question_by_retriever: dict[str, pd.DataFrame],
+    k: int,
+    n_boot: int = 10000,
+    alpha: float = 0.05,
+    rng=None,
+) -> pd.DataFrame:
+    """Recall@`k` mean + bootstrap CI, grouped by CRAGB question `type`, per retriever.
+
+    Slices at a single `k` (PLAN.md §7's headline is Recall@5) rather
+    than every `k` in `config.k_values`: the per-type breakdown is meant
+    to be read as one bar chart, and a `type` x `retriever` x `k` cube
+    would be harder to present than it is to compute — pick the k that
+    matters for the report, not every k that's cheap to include.
+
+    Args:
+        per_question_by_retriever: `{"bm25": df, "dense": df}`, each in
+            the long format `score_retriever`/`run_rq2_eval` produce
+            (`[question_id, type, k, recall, hit, ndcg, mrr]`).
+        k: the single `k` to slice at.
+        n_boot, alpha, rng: forwarded to `cragb.eval.bootstrap.bootstrap_ci`.
+
+    Returns:
+        `[retriever, type, k, recall_mean, recall_ci_lo, recall_ci_hi, n_questions]`,
+        one row per (retriever, type).
+
+    Raises:
+        ValueError: if `k` is not present in a retriever's per-question data.
+    """
+    rows: list[dict[str, object]] = []
+    for retriever, df in per_question_by_retriever.items():
+        df_k = df.loc[df["k"] == k]
+        if df_k.empty:
+            raise ValueError(
+                f"k={k} not found in per-question data for retriever={retriever!r}; "
+                f"available k values: {sorted(df['k'].unique())}"
+            )
+        for qtype, group in df_k.groupby("type"):
+            scores = group["recall"].tolist()
+            lo, hi = bootstrap_ci(scores, n_boot=n_boot, alpha=alpha, rng=rng)
+            rows.append(
+                {
+                    "retriever": retriever,
+                    "type": qtype,
+                    "k": k,
+                    "recall_mean": sum(scores) / len(scores),
+                    "recall_ci_lo": lo,
+                    "recall_ci_hi": hi,
+                    "n_questions": len(scores),
+                }
+            )
+    return pd.DataFrame(rows).sort_values(["type", "retriever"]).reset_index(drop=True)
+
+
+def h2_interaction_summary(by_type_table: pd.DataFrame) -> pd.DataFrame:
+    """Widen the per-type table to one row per type, naming which retriever leads.
+
+    A quick, printable read on H2 (PLAN.md §2: "dense ≥ BM25 on
+    paraphrased/semantic questions; BM25 competitive or better on
+    exact-attribute/lexical questions... expect a query-type interaction,
+    not a global winner") — whether at least one type actually favors
+    BM25 is the specific thing T3.7's validation checklist asks to
+    confirm (or honestly flag if it doesn't hold).
+
+    Args:
+        by_type_table: output of `summarize_recall_by_type`.
+
+    Returns:
+        `[type, bm25_recall_mean, dense_recall_mean, leader]`, `leader`
+        one of `"bm25"`, `"dense"`, or `"tie"` (means equal within
+        floating-point tolerance).
+    """
+    wide = by_type_table.pivot(index="type", columns="retriever", values="recall_mean")
+
+    def _leader(row: pd.Series) -> str:
+        if abs(row["bm25"] - row["dense"]) < 1e-9:
+            return "tie"
+        return "bm25" if row["bm25"] > row["dense"] else "dense"
+
+    wide["leader"] = wide.apply(_leader, axis=1)
+    wide = wide.rename(columns={"bm25": "bm25_recall_mean", "dense": "dense_recall_mean"})
+    return wide.reset_index()[["type", "bm25_recall_mean", "dense_recall_mean", "leader"]]
+
+
+def plot_recall_per_type(by_type_table: pd.DataFrame, out_path: str | Path, k: int) -> None:
+    """Grouped bar chart: Recall@`k` by question type, BM25/dense side by side.
+
+    PLAN.md §7 figure #3 — the per-question-type retrieval bar chart.
+
+    Args:
+        by_type_table: output of `summarize_recall_by_type`.
+        out_path: where to save the figure, absolute or relative to the
+            repo root.
+        k: used only for the title/axis label (the table is already
+            sliced to one `k`).
+    """
+    import matplotlib.pyplot as plt  # lazy: see plot_recall_at_k
+    import numpy as np
+
+    types = sorted(by_type_table["type"].unique())
+    retrievers = ["bm25", "dense"]
+    x = np.arange(len(types))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    for i, retriever in enumerate(retrievers):
+        sub = by_type_table.loc[by_type_table["retriever"] == retriever].set_index("type").loc[types]
+        offset = (i - 0.5) * width
+        yerr = [
+            sub["recall_mean"] - sub["recall_ci_lo"],
+            sub["recall_ci_hi"] - sub["recall_mean"],
+        ]
+        ax.bar(x + offset, sub["recall_mean"], width, yerr=yerr, capsize=3, label=retriever)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(types, rotation=30, ha="right")
+    ax.set_ylabel(f"Recall@{k}")
+    ax.set_title(f"RQ2: Recall@{k} by question type, BM25 vs dense (CRAGB v1, 95% bootstrap CI)")
+    ax.legend()
+    ax.grid(alpha=0.3, axis="y")
+    fig.tight_layout()
+
+    resolved_out_path = resolve_path(out_path)
+    resolved_out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(resolved_out_path, dpi=150)
+    plt.close(fig)
+
+
+# --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
+
+
+_PER_QUESTION_PATH = "results/tables/retrieval_eval_per_question_v1.csv"
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Build BM25 + dense retrieval indexes over corpus_v1 (T3.5), "
-        "or run the full RQ2 eval against CRAGB v1 (T3.6)."
+        "run the full RQ2 eval against CRAGB v1 (T3.6), or slice it by question "
+        "type (T3.7)."
     )
     parser.add_argument("--config", default="configs/retrieval_eval.yaml")
     parser.add_argument("--smoke-query", default="does this run true to size")
     parser.add_argument(
         "--mode",
-        choices=["build", "eval"],
+        choices=["build", "eval", "by-type"],
         default="build",
         help="'build' (default, T3.5): index both retrievers, smoke-test them, "
         "write the build report. 'eval' (T3.6): run the full RQ2 comparison "
         "against CRAGB v1 and write results/tables/retrieval_eval_v1.csv + "
-        "reports/figures/recall_at_k_bm25_vs_dense.png.",
+        f"{_PER_QUESTION_PATH} + reports/figures/recall_at_k_bm25_vs_dense.png. "
+        "'by-type' (T3.7): slice T3.6's per-question output by CRAGB question "
+        "type and write results/tables/retrieval_eval_by_type_v1.csv + "
+        "reports/figures/recall_per_type.png — reads "
+        f"{_PER_QUESTION_PATH} directly, so it needs neither the corpus, an "
+        "index, nor the GPU (run 'eval' first).",
     )
     parser.add_argument(
-        "--seed", type=int, default=None, help="override config.seed for the eval's bootstrap CIs"
+        "--seed", type=int, default=None, help="override config.seed for bootstrap CIs"
+    )
+    parser.add_argument(
+        "--k",
+        type=int,
+        default=5,
+        help="k to slice the per-type breakdown at (mode=by-type only; PLAN.md "
+        "§7's headline k)",
     )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
     config = load_retrieval_eval_config(args.config)
+
+    from cragb.utils.seeds import set_global_seed
+
+    seed = args.seed if args.seed is not None else config.seed
+    seed_state = set_global_seed(seed)
+
+    if args.mode == "by-type":
+        per_question_path = resolve_path(_PER_QUESTION_PATH)
+        if not per_question_path.is_file():
+            raise FileNotFoundError(
+                f"{per_question_path} not found; run `--mode eval` first (T3.6) "
+                "to produce per-question scores before the by-type breakdown (T3.7)."
+            )
+        per_question_all = pd.read_csv(per_question_path)
+        per_question_by_retriever = {
+            name: group.drop(columns="retriever").reset_index(drop=True)
+            for name, group in per_question_all.groupby("retriever")
+        }
+        logger.info(
+            "loaded %s: %d rows across %d retriever(s)",
+            per_question_path,
+            len(per_question_all),
+            len(per_question_by_retriever),
+        )
+
+        by_type_table = summarize_recall_by_type(
+            per_question_by_retriever, k=args.k, rng=seed_state.numpy_rng
+        )
+
+        by_type_path = resolve_path("results/tables/retrieval_eval_by_type_v1.csv")
+        by_type_path.parent.mkdir(parents=True, exist_ok=True)
+        by_type_table.to_csv(by_type_path, index=False)
+        logger.info("wrote per-type table (%d rows) to %s", len(by_type_table), by_type_path)
+
+        fig_path = "reports/figures/recall_per_type.png"
+        plot_recall_per_type(by_type_table, fig_path, k=args.k)
+        logger.info("wrote per-type figure to %s", resolve_path(fig_path))
+
+        h2_summary = h2_interaction_summary(by_type_table)
+        logger.info("H2 interaction summary (leader per type):\n%s", h2_summary.to_string(index=False))
+        return
+
     corpus = pd.read_parquet(resolve_path(config.corpus_in), columns=["text"])
     logger.info("loaded corpus_in=%s: %d reviews", config.corpus_in, len(corpus))
 
@@ -589,15 +792,11 @@ def main(argv: list[str] | None = None) -> None:
 
     # args.mode == "eval"
     from cragb.eval.cragb_questions import filter_scorable, load_retrieval_questions
-    from cragb.utils.seeds import set_global_seed
-
-    seed = args.seed if args.seed is not None else config.seed
-    seed_state = set_global_seed(seed)
 
     questions = filter_scorable(load_retrieval_questions(config.questions_in))
     logger.info("loaded %s: %d scorable questions", config.questions_in, len(questions))
 
-    rq2_table, _per_question, _build_reports = run_rq2_eval(
+    rq2_table, per_question, _build_reports = run_rq2_eval(
         corpus, config, questions, smoke_query=args.smoke_query, rng=seed_state.numpy_rng
     )
 
@@ -605,6 +804,16 @@ def main(argv: list[str] | None = None) -> None:
     table_path.parent.mkdir(parents=True, exist_ok=True)
     rq2_table.to_csv(table_path, index=False)
     logger.info("wrote RQ2 table (%d rows) to %s", len(rq2_table), table_path)
+
+    per_question_combined = pd.concat(
+        [df.assign(retriever=name) for name, df in per_question.items()], ignore_index=True
+    )
+    per_question_path = resolve_path(_PER_QUESTION_PATH)
+    per_question_path.parent.mkdir(parents=True, exist_ok=True)
+    per_question_combined.to_csv(per_question_path, index=False)
+    logger.info(
+        "wrote per-question scores (%d rows) to %s", len(per_question_combined), per_question_path
+    )
 
     fig_path = "reports/figures/recall_at_k_bm25_vs_dense.png"
     plot_recall_at_k(rq2_table, fig_path)
