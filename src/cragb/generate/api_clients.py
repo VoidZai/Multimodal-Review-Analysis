@@ -61,6 +61,16 @@ class GroqClient:
             class never requires the key to already be set).
         temperature: sampling temperature.
         max_tokens: max completion tokens.
+        reasoning_effort: optional reasoning-effort hint (e.g. `"none"`,
+            `"low"`), forwarded to the API only when set. Added for
+            T4b.4's judge model (`qwen/qwen3.6-27b`), which otherwise
+            emits visible `<think>...</think>` reasoning inline in its
+            completion (PLAN.md §14.4) — `"none"` suppresses that.
+            Left as `None` by default so every existing config
+            (`grounded_qa.yaml`, `closed_book_qa.yaml`, ...) that never
+            sets this keeps sending the exact same request payload as
+            before, byte for byte — see `complete`'s docstring for why
+            that matters for the disk cache.
         timeout_s: read timeout in seconds (connect timeout is fixed at
             `CONNECT_TIMEOUT_S`).
         max_retries: retry attempts on 429/5xx before giving up.
@@ -72,6 +82,7 @@ class GroqClient:
     api_key_env: str = "GROQ_API_KEY"
     temperature: float = 0.7
     max_tokens: int = 1500
+    reasoning_effort: str | None = None
     timeout_s: int = 30
     max_retries: int = 5
     cache_dir: str = "results/cache/api"
@@ -115,6 +126,13 @@ class GroqClient:
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
         }
+        # Only included when set, and deliberately not `"reasoning_effort": None`
+        # otherwise -- every payload built before this field existed had no such key at
+        # all, and this keeps it that way for any caller that leaves it unset, so their
+        # cache keys (a hash of the full payload, cragb.generate.api_cache._cache_key)
+        # don't change and every already-cached response stays a hit.
+        if self.reasoning_effort is not None:
+            payload["reasoning_effort"] = self.reasoning_effort
 
         def _call() -> str:
             resp = self._session.post(

@@ -1,0 +1,39 @@
+# Rubric answer-quality judge configuration (T4b.4; PLAN.md §3 E5, §8, §9, M4b.md T4b.4).
+#
+# Model: qwen/qwen3.6-27b -- deliberately NOT openai/gpt-oss-20b or openai/gpt-oss-120b.
+# PLAN.md §14.4: the closed-book and RAG-small arms (T4b.2) both run on gpt-oss-20b, and
+# RAG-large runs on gpt-oss-120b -- a gpt-oss judge would be scoring its own model
+# family's output on both the RQ0 comparison (closed-book vs RAG-small) and RQ1
+# (RAG-small vs RAG-large), exactly the self-preference-bias risk PLAN.md §9 names.
+# qwen3.6-27b is a distinct family, confirmed live on Groq's catalog with a 131072-token
+# context window (comfortably fits a judge prompt carrying a full context block,
+# candidate answer, and reference answer together).
+#
+# reasoning_effort: "none" -- qwen3.6-27b emits visible <think>...</think> reasoning
+# inline in `content` by default (confirmed live at T4b.2 build time, PLAN.md §14.4),
+# which would break parse_judge_response's strict single-JSON-object parsing. Setting
+# reasoning_effort to "none" was confirmed live to suppress it and return a bare answer.
+# cragb.generate.api_clients.GroqClient only includes this field in the request payload
+# (and cache key) when it is set, so every other config that never sets it is unaffected.
+
+seed: 42
+
+paths:
+  prompt_template: src/cragb/generate/prompts/answer_judge_v1.md
+  # Same disk cache every other API-calling module in this project uses.
+  cache_dir: results/cache/api
+
+provider:
+  name: groq
+  model: qwen/qwen3.6-27b
+  api_base: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  # Deterministic scoring, not creative generation -- a judge that scores the same
+  # answer differently on different runs would defeat T4b.6's reliability measurement.
+  temperature: 0.0
+  # The rubric's JSON response is small (~100-150 tokens); generous headroom in case a
+  # rationale runs long.
+  max_tokens: 500
+  reasoning_effort: "none"
+  timeout_s: 30
+  max_retries: 5
