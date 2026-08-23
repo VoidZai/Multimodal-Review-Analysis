@@ -100,6 +100,9 @@ class _StubRetriever(Retriever):
     def search(self, query: str, k: int) -> list[SearchResult]:
         return self._ranking[:k]
 
+    def index_size_bytes(self) -> int:  # pragma: no cover - unused
+        raise NotImplementedError
+
 
 def _hit(doc_id: str, rank: int, score: float = 1.0) -> SearchResult:
     return SearchResult(doc_id=doc_id, score=score, rank=rank)

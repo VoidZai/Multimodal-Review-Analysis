@@ -52,6 +52,9 @@ class FakeRetriever(Retriever):
         self.calls.append((query, k))
         return self._results[:k]
 
+    def index_size_bytes(self) -> int:  # pragma: no cover - unused in these tests
+        return 0
+
 
 def make_question(id_="q1", category="fit_sizing", question="Does this run small?", is_negative=False) -> QuestionRecord:
     return QuestionRecord(id=id_, category=category, question=question, is_negative=is_negative)

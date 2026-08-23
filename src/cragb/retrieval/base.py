@@ -9,6 +9,15 @@ builds whatever internal structure a given method needs, `.search()`
 returns a ranked list of `SearchResult`s, and nothing about the caller
 (pooling in T2.6, the eval harness in E3/E5) needs to know or care which
 concrete retriever it's holding.
+
+`.index_size_bytes()` (T5.2's sibling task T5.3; PLAN.md §3 E6, §8 G4)
+extends that same "single shape" principle to the cost/latency harness:
+G4 wants a comparable on-disk index size for BM25 vs dense, and the only
+way to get one honestly is to ask each concrete retriever to serialize
+*only* the structures it would need to persist to be reusable — not
+"whatever this Python object's heap size happens to be", which for
+`DenseRetriever` would wrongly include the loaded embedding model
+(shared, reusable weights, not part of the built index).
 """
 
 from __future__ import annotations
@@ -78,5 +87,23 @@ class Retriever(ABC):
         Raises:
             RuntimeError: if called before `.index()`.
             ValueError: if `k` is not positive.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def index_size_bytes(self) -> int:
+        """Serialized size of the built index, in bytes.
+
+        Deliberately scoped to *only* what would need to be persisted to
+        reuse this index later — document ids plus the retrieval-specific
+        index structure (BM25 term-frequency tables; the FAISS index for
+        dense) — not any loaded model weights, and not Python object
+        overhead. Used for the cost/latency table (PLAN.md §3 E6, §8 G4).
+
+        Returns:
+            Size in bytes.
+
+        Raises:
+            RuntimeError: if called before `.index()`.
         """
         raise NotImplementedError

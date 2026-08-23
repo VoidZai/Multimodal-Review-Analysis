@@ -11,6 +11,7 @@ M2.md's hardware section, since indexing is CPU-only regardless of GPU.
 from __future__ import annotations
 
 import logging
+import pickle
 import re
 from dataclasses import dataclass, field
 
@@ -85,3 +86,12 @@ class BM25Retriever(Retriever):
             SearchResult(doc_id=self._doc_ids[i], score=float(scores[i]), rank=rank)
             for rank, i in enumerate(ranked_idx, start=1)
         ]
+
+    def index_size_bytes(self) -> int:
+        if self._bm25 is None:
+            raise RuntimeError("BM25Retriever.index_size_bytes() called before .index().")
+        # rank_bm25.BM25Okapi holds no external resources (pure Python/NumPy
+        # attributes only), so pickling it is a faithful stand-in for "the
+        # bytes a real on-disk save would need" -- there is no heavier
+        # underlying artifact (e.g. a loaded model) it would wrongly include.
+        return len(pickle.dumps(self._bm25)) + len(pickle.dumps(self._doc_ids))

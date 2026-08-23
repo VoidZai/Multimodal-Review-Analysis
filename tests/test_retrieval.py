@@ -73,6 +73,17 @@ class TestRetrieverInterface:
         with pytest.raises(TypeError):
             MissingSearch()
 
+    def test_subclass_missing_index_size_bytes_raises(self):
+        class MissingIndexSizeBytes(Retriever):
+            def index(self, corpus, text_col="text", id_col=None):
+                pass
+
+            def search(self, query, k):
+                return []
+
+        with pytest.raises(TypeError):
+            MissingIndexSizeBytes()
+
     def test_search_result_fields(self):
         result = SearchResult(doc_id="42", score=1.5, rank=1)
         assert result.doc_id == "42"
@@ -178,6 +189,21 @@ class TestBM25RetrieverGuardRails:
         retriever.index(corpus)  # must not raise on the None row
         results = retriever.search("shirt", k=2)
         assert len(results) == 2
+
+    def test_index_size_bytes_before_index_raises(self):
+        retriever = BM25Retriever()
+        with pytest.raises(RuntimeError, match=r"before \.index\(\)"):
+            retriever.index_size_bytes()
+
+    def test_index_size_bytes_is_positive_and_grows_with_corpus(self):
+        small = BM25Retriever()
+        small.index(pd.DataFrame({"text": ["one short review"]}))
+
+        large = BM25Retriever()
+        large.index(make_synthetic_corpus())
+
+        assert small.index_size_bytes() > 0
+        assert large.index_size_bytes() > small.index_size_bytes()
 
 
 @pytest.mark.skipif(
@@ -289,6 +315,21 @@ class TestDenseRetrieverGuardRails:
         retriever.index(corpus, text_col="text", id_col="docid")
         results = retriever.search("shirt", k=1)
         assert results[0].doc_id == "review_42"
+
+    def test_index_size_bytes_before_index_raises(self):
+        retriever = DenseRetriever()
+        with pytest.raises(RuntimeError, match=r"before \.index\(\)"):
+            retriever.index_size_bytes()
+
+    def test_index_size_bytes_is_positive_and_excludes_model_weights(self):
+        retriever = DenseRetriever(batch_size=8)
+        retriever.index(make_synthetic_corpus())
+        size = retriever.index_size_bytes()
+        assert size > 0
+        # bge-small-en-v1.5 is ~130M params (~500MB+ in fp32); an index over
+        # 4 short reviews must stay in the KB range, or the loaded model's
+        # weights leaked into the measurement.
+        assert size < 10_000_000
 
 
 @requires_dense

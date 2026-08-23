@@ -31,6 +31,7 @@ alongside indexing).
 from __future__ import annotations
 
 import logging
+import pickle
 import time
 from dataclasses import dataclass, field
 
@@ -146,3 +147,13 @@ class DenseRetriever(Retriever):
             for rank, (doc_idx, score) in enumerate(zip(indices[0], scores[0]), start=1)
             if doc_idx != -1  # FAISS pads with -1 if the index has fewer than k_eff entries
         ]
+
+    def index_size_bytes(self) -> int:
+        if self._index is None:
+            raise RuntimeError("DenseRetriever.index_size_bytes() called before .index().")
+        # faiss.serialize_index round-trips through the same format FAISS's
+        # own write_index would put on disk, so this is a real serialized
+        # size -- not the loaded SentenceTransformer's weights, which are
+        # shared/reusable, not part of *this* index.
+        serialized = faiss.serialize_index(self._index)
+        return int(serialized.nbytes) + len(pickle.dumps(self._doc_ids))

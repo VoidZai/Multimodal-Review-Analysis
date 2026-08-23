@@ -1,0 +1,40 @@
+# Retrieval cost/latency measurement configuration (T5.3; PLAN.md §3 E6, §8 G4).
+#
+# Deliberately re-specifies (rather than re-deriving) the same corpus, chunking, k, and
+# dense-model choices as configs/retrieval_eval.yaml: T5.3 measures the cost of the
+# *exact* configuration whose Recall@k is already reported in retrieval_eval_v1.csv (T3.6)
+# under configs/chunking.yaml's locked whole_review scheme (T3.4). A different k or
+# chunking here would produce cost/latency numbers for a configuration nobody's quality
+# numbers apply to. Kept as a separate file (not a shared import of retrieval_eval.yaml)
+# because this task's own knobs -- n_warmup, n_repeats, the output path -- have no
+# equivalent there and would otherwise have to live awkwardly inside T3.6's config.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+  questions_in: benchmark/cragb_v1.jsonl
+  out: results/tables/retrieval_cost_latency_v1.csv
+
+chunking_config: configs/chunking.yaml
+
+# T3.6/T3.7's headline k (PLAN.md §7's figures and tables standardize on k=5) -- cost and
+# latency are reported once per retriever, not once per k in retrieval_eval.yaml's
+# k_values sweep, since the query itself (encode + search) costs the same regardless of
+# how many of its results get used downstream.
+k: 5
+
+# Untimed passes over all 60 questions run first and discarded (T5.1's time_calls),
+# letting BM25's first-call overhead and (mainly) CUDA context / cuBLAS
+# kernel-autotuning settle before anything is measured.
+n_warmup: 1
+# Timed passes over all 60 questions; latency percentiles are computed over the
+# resulting 60 * n_repeats per-call durations.
+n_repeats: 3
+
+retrievers:
+  bm25: {}   # no tunable parameters (cragb.retrieval.bm25.BM25Retriever)
+  dense:
+    model_name: BAAI/bge-small-en-v1.5
+    batch_size: 64
+    device: null   # null = auto-detect CUDA, else CPU (see DenseRetriever)
