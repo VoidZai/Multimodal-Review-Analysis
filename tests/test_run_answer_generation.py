@@ -24,8 +24,8 @@ import yaml
 
 from cragb.eval.run_answer_generation import (
     ARMS,
-    _ARM_DEFAULT_CONFIG,
-    _ARM_DEFAULT_OUT,
+    ARM_DEFAULT_CONFIG,
+    ARM_DEFAULT_OUT,
     main,
     run_arm,
     validate_full_run,
@@ -53,26 +53,26 @@ def make_grounded_transcript(qid: str, answer_text: str = "Runs small [101].") -
 
 
 # --------------------------------------------------------------------------
-# ARMS / _ARM_DEFAULT_CONFIG / _ARM_DEFAULT_OUT wiring
+# ARMS / ARM_DEFAULT_CONFIG / ARM_DEFAULT_OUT wiring
 # --------------------------------------------------------------------------
 
 
 class TestArmWiring:
     def test_every_arm_has_a_default_config(self):
-        assert set(_ARM_DEFAULT_CONFIG) == set(ARMS)
+        assert set(ARM_DEFAULT_CONFIG) == set(ARMS)
 
     def test_every_arm_has_a_default_output_path(self):
-        assert set(_ARM_DEFAULT_OUT) == set(ARMS)
+        assert set(ARM_DEFAULT_OUT) == set(ARMS)
 
     def test_default_output_paths_are_distinct(self):
         # A collision here would mean two arms silently overwrite each other's transcripts.
-        paths = list(_ARM_DEFAULT_OUT.values())
+        paths = list(ARM_DEFAULT_OUT.values())
         assert len(paths) == len(set(paths))
 
     def test_rag_small_config_is_not_rag_large_config(self):
         # RQ1 needs these to actually differ (different model); a copy-paste slip
         # pointing both at the same file would silently collapse RQ1 to a no-op.
-        assert _ARM_DEFAULT_CONFIG["rag_small"] != _ARM_DEFAULT_CONFIG["rag_large"]
+        assert ARM_DEFAULT_CONFIG["rag_small"] != ARM_DEFAULT_CONFIG["rag_large"]
 
 
 # --------------------------------------------------------------------------

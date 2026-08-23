@@ -19,6 +19,10 @@ dependencies:
       - langdetect==1.0.9
       - python-dotenv==1.2.*
       - rank_bm25==0.2.*
+      # T4b.6: cragb.eval.judge_validation's Cohen's kappa (quadratic-weighted) for
+      # judge-vs-human agreement. Installs fine in the main environment (no Windows
+      # MAX_PATH issue, unlike sentence-transformers -- PLAN.md §14.1).
+      - scikit-learn==1.9.*
       # Dense retrieval (T2.5). On Windows, installing these into a
       # deeply-nested site-packages path (e.g. the Microsoft Store
       # Python's per-user install location) can hit MAX_PATH errors from

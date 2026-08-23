@@ -1,0 +1,29 @@
+# Judge validation configuration (T4b.6; PLAN.md §1.4 risk E, §8, §11, M4b.md T4b.6).
+#
+# PLAN.md risk E: "Un-validated answer metric + judge... LLM judges have position/
+# verbosity/self-preference bias" -- T4b.4's judge must be measured against a human
+# before T4b.7 trusts it at scale. This config drives both halves of that two-step
+# workflow (mirrors configs/labeling.yaml's export/validate split for T2.7's relevance
+# labeling):
+#   1. `python -m cragb.eval.judge_validation export` -- sample `sampling.sample_size`
+#      rows (stratified across arms, shuffled, arm identity hidden) from T4b.5's
+#      judge_scores_v1.csv and write a blank-scores worksheet for a human to fill in.
+#   2. A human hand-scores every row on the same 1-5 rubric the judge used.
+#   3. `python -m cragb.eval.judge_validation score` -- reads the filled-in worksheet,
+#      re-derives the same sample (same seed -- no separate key file needed), and
+#      computes per-criterion Cohen's kappa (quadratic-weighted) and Spearman
+#      correlation between judge and human scores.
+
+seed: 42
+
+paths:
+  judge_scores_in: results/tables/judge_scores_v1.csv
+  references_in: benchmark/reference_answers_v1.jsonl
+  worksheet_out: results/worksheets/judge_validation_worksheet_v1.md
+  validation_out: results/tables/judge_validation_v1.csv
+
+sampling:
+  # Total rows across all three arms combined (PLAN.md §3 E5: "hand-score 30-50
+  # answers"). Split as evenly as possible per arm by build_sample -- with 3 arms this
+  # is 14/13/13.
+  sample_size: 40

@@ -59,13 +59,16 @@ logger = logging.getLogger(__name__)
 ARMS: tuple[str, ...] = ("closed_book", "rag_small", "rag_large")
 
 # Each arm's default config and output path. Together these *are* M4b.md's T4b.2 artifact
-# list: three configs, three output files.
-_ARM_DEFAULT_CONFIG: dict[str, str] = {
+# list: three configs, three output files. Public (no leading underscore) and reused
+# as-is by cragb.eval.run_judge_eval (T4b.5) as the single source of truth for where
+# each arm's transcripts live -- hardcoding these same three paths a second time there
+# would risk the two modules silently drifting apart.
+ARM_DEFAULT_CONFIG: dict[str, str] = {
     "closed_book": "configs/closed_book_qa.yaml",
     "rag_small": "configs/grounded_qa.yaml",
     "rag_large": "configs/grounded_qa_large.yaml",
 }
-_ARM_DEFAULT_OUT: dict[str, str] = {
+ARM_DEFAULT_OUT: dict[str, str] = {
     "closed_book": "results/tables/answer_gen_closed_book_v1.jsonl",
     "rag_small": "results/tables/answer_gen_rag_small_v1.jsonl",
     "rag_large": "results/tables/answer_gen_rag_large_v1.jsonl",
@@ -261,8 +264,8 @@ def main(argv: list[str] | None = None) -> int:
     written: dict[str, Path] = {}
 
     for arm in arms_to_run:
-        config_path = args.config or _ARM_DEFAULT_CONFIG[arm]
-        out_path = args.out or _ARM_DEFAULT_OUT[arm]
+        config_path = args.config or ARM_DEFAULT_CONFIG[arm]
+        out_path = args.out or ARM_DEFAULT_OUT[arm]
         logger.info("arm=%s: %d question(s), config=%s -> %s", arm, len(questions), config_path, out_path)
         written[arm] = run_arm(arm, config_path, out_path, questions, rag_index_cache)
         logger.info("arm=%s: wrote %d transcript(s) to %s", arm, len(questions), written[arm])
