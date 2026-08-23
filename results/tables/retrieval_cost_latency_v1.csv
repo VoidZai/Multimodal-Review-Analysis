@@ -1,0 +1,3 @@
+retriever,n_chunks,build_seconds,index_bytes,peak_rss_mb,peak_vram_mb,device,n_queries,qps,latency_p50_ms,latency_p90_ms,latency_p95_ms,latency_mean_ms
+bm25,200000,5.422,75024680,1046.0,0.0,,180,1.2,845.41,1038.2,1089.65,832.76
+dense,200000,459.578,308889574,2022.9,729.0,cuda,180,21.31,46.76,49.21,49.82,46.92
