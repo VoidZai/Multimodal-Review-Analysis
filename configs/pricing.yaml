@@ -1,0 +1,36 @@
+# Groq per-model pricing snapshot (T5.4; PLAN.md §3 E6, §8 G4).
+#
+# Treated as data with a date, not a number buried in code (M5.md T5.4) -- Groq's
+# published rates change and models get deprecated mid-project (PLAN.md §14.4 already
+# recorded one such deprecation, llama-3.1-8b-instant, between M2 and M4a). Every entry
+# below is independently cross-checked against two sources (Groq's own per-model docs
+# page, which states both a headline $/1M rate and a "tokens per $1" figure that must be
+# each other's reciprocal, plus a general web search) on `snapshot_date` -- if a number
+# here is ever wrong, re-verify against `source_url` rather than assuming a typo.
+#
+# Covers the three models T5.4 needs: the RQ0/RQ1 answer-generation arms
+# (openai/gpt-oss-20b, configs/grounded_qa.yaml + configs/closed_book_qa.yaml;
+# openai/gpt-oss-120b, configs/grounded_qa_large.yaml) and the answer-quality judge
+# (qwen/qwen3.6-27b, configs/judge.yaml) -- the judge is not yet costed by any table this
+# milestone produces (that is a judge-cost accounting task, not built here), but its
+# pricing is captured now while the catalog snapshot is being taken anyway, so a future
+# task doesn't have to re-derive it.
+
+models:
+  openai/gpt-oss-20b:
+    input_usd_per_1m: 0.075
+    output_usd_per_1m: 0.30
+    snapshot_date: "2026-08-23"
+    source_url: https://console.groq.com/docs/model/openai/gpt-oss-20b
+
+  openai/gpt-oss-120b:
+    input_usd_per_1m: 0.15
+    output_usd_per_1m: 0.60
+    snapshot_date: "2026-08-23"
+    source_url: https://console.groq.com/docs/model/openai/gpt-oss-120b
+
+  qwen/qwen3.6-27b:
+    input_usd_per_1m: 0.60
+    output_usd_per_1m: 3.00
+    snapshot_date: "2026-08-23"
+    source_url: https://console.groq.com/docs/model/qwen/qwen3.6-27b
