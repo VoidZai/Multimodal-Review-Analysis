@@ -218,7 +218,9 @@ class GroqClient:
 
         return self._cache.call(payload, _call)
 
-    def complete_with_usage(self, messages: list[dict[str, str]]) -> CompletionResult:
+    def complete_with_usage(
+        self, messages: list[dict[str, str]], bypass_cache: bool = False
+    ) -> CompletionResult:
         """Like `complete`, but also returns token usage, latency, and cache status.
 
         Uses the exact same request payload as `complete()` (via
@@ -233,9 +235,22 @@ class GroqClient:
         Args:
             messages: OpenAI-style chat messages, e.g.
                 `[{"role": "user", "content": "..."}]`.
+            bypass_cache: if `True` (T5.5's end-to-end latency harness),
+                always issues a live call and never touches the disk cache
+                — no read, no write. A cache hit's ~0ms latency would make
+                every "how long does a real question take" measurement
+                meaningless, so bypassing the read is the whole point; the
+                response is deliberately not written back either, since a
+                live sample at temperature > 0 can return a different
+                completion than the one already cached from the original
+                generation run, and silently overwriting that canonical
+                transcript would be worse than this call simply not
+                caching at all. Default `False` preserves this method's
+                exact prior behaviour for every existing caller.
 
         Returns:
-            A `CompletionResult`.
+            A `CompletionResult`. `cached` is always `False` when
+            `bypass_cache=True`.
 
         Raises:
             MissingAPIKeyError: if the API key env var is unset.
@@ -257,7 +272,12 @@ class GroqClient:
             }
             return text, meta
 
-        text, meta, cached = self._cache.call_with_meta(payload, _call)
+        if bypass_cache:
+            text, meta = _call()
+            cached = False
+        else:
+            text, meta, cached = self._cache.call_with_meta(payload, _call)
+
         result = CompletionResult(
             text=text,
             prompt_tokens=(meta.get("prompt_tokens") if meta else None),

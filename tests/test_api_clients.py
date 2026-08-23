@@ -326,3 +326,79 @@ class TestCompleteWithUsage:
         with pytest.raises(MissingAPIKeyError):
             client.complete_with_usage([{"role": "user", "content": "Hi"}])
         assert calls == []
+
+
+class TestCompleteWithUsageBypassCache:
+    def test_bypassed_call_is_never_cached_true(self, tmp_path, monkeypatch):
+        client = make_client(tmp_path)
+        monkeypatch.setattr(
+            client._session,
+            "post",
+            lambda url, **kw: FakeResponse("live answer", usage={"prompt_tokens": 5, "completion_tokens": 2}),
+        )
+        monkeypatch.setenv("GROQ_API_KEY", "test-key")
+
+        result = client.complete_with_usage([{"role": "user", "content": "Hi"}], bypass_cache=True)
+
+        assert result.cached is False
+        assert result.text == "live answer"
+        assert result.latency_s is not None and result.latency_s >= 0
+
+    def test_repeated_bypassed_calls_always_hit_the_network(self, tmp_path, monkeypatch):
+        call_count = 0
+
+        def fake_post(url, **kw):
+            nonlocal call_count
+            call_count += 1
+            return FakeResponse("live answer", usage={"prompt_tokens": 5, "completion_tokens": 2})
+
+        client = make_client(tmp_path)
+        monkeypatch.setattr(client._session, "post", fake_post)
+        monkeypatch.setenv("GROQ_API_KEY", "test-key")
+
+        messages = [{"role": "user", "content": "Hi"}]
+        client.complete_with_usage(messages, bypass_cache=True)
+        client.complete_with_usage(messages, bypass_cache=True)
+
+        assert call_count == 2
+
+    def test_bypassed_call_writes_nothing_to_the_disk_cache(self, tmp_path, monkeypatch):
+        cache_dir = tmp_path / "cache"
+        client = make_client(tmp_path, cache_dir=str(cache_dir))
+        monkeypatch.setattr(
+            client._session,
+            "post",
+            lambda url, **kw: FakeResponse("live answer", usage={"prompt_tokens": 5, "completion_tokens": 2}),
+        )
+        monkeypatch.setenv("GROQ_API_KEY", "test-key")
+
+        client.complete_with_usage([{"role": "user", "content": "Hi"}], bypass_cache=True)
+
+        response_files = list(cache_dir.glob("*.json")) if cache_dir.is_dir() else []
+        assert response_files == []
+
+    def test_bypass_does_not_read_an_existing_cache_entry(self, tmp_path, monkeypatch):
+        # A question already cached via a normal (non-bypassed) call must still be
+        # re-fetched live when bypass_cache=True -- that is the entire point.
+        client = make_client(tmp_path)
+        monkeypatch.setenv("GROQ_API_KEY", "test-key")
+        messages = [{"role": "user", "content": "Hi"}]
+
+        monkeypatch.setattr(
+            client._session, "post", lambda url, **kw: FakeResponse("cached answer", usage={"prompt_tokens": 1, "completion_tokens": 1})
+        )
+        client.complete_with_usage(messages)  # populates the cache
+
+        call_count = 0
+
+        def fake_post(url, **kw):
+            nonlocal call_count
+            call_count += 1
+            return FakeResponse("fresh live answer", usage={"prompt_tokens": 9, "completion_tokens": 9})
+
+        monkeypatch.setattr(client._session, "post", fake_post)
+        result = client.complete_with_usage(messages, bypass_cache=True)
+
+        assert call_count == 1
+        assert result.cached is False
+        assert result.text == "fresh live answer"
