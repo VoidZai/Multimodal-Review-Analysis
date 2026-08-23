@@ -296,18 +296,30 @@ def export_worksheet(
     return resolved, rows
 
 
-def score_worksheet(
+def build_paired_scores(
     worksheet_path: str | Path,
     judge_scores_path: str | Path,
     references_path: str | Path,
     sample_size: int,
     seed: int,
 ) -> pd.DataFrame:
-    """Read a filled-in worksheet back and compute judge-vs-human agreement.
+    """Re-derive the sample and pair it against a filled-in worksheet's human scores.
 
     Re-derives the sample `export_worksheet` produced (same
     `judge_scores_path`/`references_path`/`sample_size`/`seed`) rather than reading a
-    persisted key file -- see module docstring.
+    persisted key file -- see module docstring. Split out of `score_worksheet` (T4b.6)
+    as its own function for T4b.8: the judge-vs-human agreement *figure* needs these
+    raw per-row paired values, not just `compute_agreement`'s aggregated summary.
+
+    Args:
+        worksheet_path: a filled-in worksheet (`export_worksheet`'s output, hand-scored).
+        judge_scores_path, references_path, sample_size, seed: must match what
+            `export_worksheet` was called with, to reconstruct the same sample.
+
+    Returns:
+        One row per sampled item: `row_id`, `arm`, `question_id`, and
+        `judge_<criterion>`/`human_<criterion>` (integers) for every criterion in
+        `_CRITERIA`.
 
     Raises:
         ValueError: everything `parse_worksheet` can raise (incomplete/malformed
@@ -344,7 +356,95 @@ def score_worksheet(
             record[f"human_{criterion}"] = human[criterion]
         records.append(record)
 
-    return compute_agreement(pd.DataFrame(records))
+    return pd.DataFrame(records)
+
+
+def score_worksheet(
+    worksheet_path: str | Path,
+    judge_scores_path: str | Path,
+    references_path: str | Path,
+    sample_size: int,
+    seed: int,
+) -> pd.DataFrame:
+    """Read a filled-in worksheet back and compute judge-vs-human agreement.
+
+    A thin wrapper: `build_paired_scores` does the re-derivation and pairing,
+    `compute_agreement` turns that into the per-criterion summary this returns.
+
+    Raises:
+        Everything `build_paired_scores` and `compute_agreement` can raise.
+    """
+    paired = build_paired_scores(worksheet_path, judge_scores_path, references_path, sample_size, seed)
+    return compute_agreement(paired)
+
+
+def plot_judge_human_agreement(
+    paired: pd.DataFrame, agreement: pd.DataFrame, out_path: str | Path, seed: int = 0
+) -> Path:
+    """Judge score vs human score, one scatter panel per criterion, kappa annotated.
+
+    PLAN.md §7 figure: "judge-vs-human agreement plot." A 2x2 grid, one panel per
+    `_CRITERIA` entry, each an (x=judge, y=human) scatter with the `y=x` "perfect
+    agreement" line and that criterion's Cohen's kappa/n in the title. Scores are
+    integers 1-5, so a small deterministic jitter is added to both axes purely for
+    display -- otherwise many points would land exactly on top of each other and the
+    density of disagreement would be invisible.
+
+    Uses the non-interactive `Agg` backend explicitly, set locally to this function
+    rather than relying on whatever backend matplotlib happens to auto-select --
+    that auto-selection has been observed to resolve to `TkAgg` on this project's own
+    dev machine, which fails outright on a broken Tk install (an unrelated, pre-existing
+    environment issue this function does not depend on being fixed).
+
+    Args:
+        paired: from `build_paired_scores` -- `judge_<criterion>`/`human_<criterion>`
+            columns for every criterion in `_CRITERIA`.
+        agreement: from `compute_agreement(paired)` -- supplies the annotated kappa/n
+            per criterion, so the figure can never silently disagree with
+            `judge_validation_v1.csv`'s own numbers by recomputing them differently.
+        out_path: where to save the PNG.
+        seed: seeds the display jitter, so the figure is reproducible byte-for-byte
+            across re-runs rather than shifting points randomly each time.
+
+    Returns:
+        The resolved path written.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    rng = np.random.default_rng(seed)
+    fig, axes = plt.subplots(2, 2, figsize=(9, 8))
+
+    for ax, criterion in zip(axes.flat, _CRITERIA):
+        judge_vals = paired[f"judge_{criterion}"].to_numpy(dtype=float)
+        human_vals = paired[f"human_{criterion}"].to_numpy(dtype=float)
+        jitter_x = rng.uniform(-0.15, 0.15, size=len(judge_vals))
+        jitter_y = rng.uniform(-0.15, 0.15, size=len(human_vals))
+
+        ax.plot([0.5, 5.5], [0.5, 5.5], linestyle="--", color="gray", linewidth=1, label="perfect agreement")
+        ax.scatter(judge_vals + jitter_x, human_vals + jitter_y, alpha=0.6, s=28, edgecolors="none")
+
+        row = agreement.loc[agreement["criterion"] == criterion].iloc[0]
+        ax.set_title(f"{criterion}  (κ={row['cohens_kappa']:.2f}, n={int(row['n'])})")
+        ax.set_xlabel("judge score")
+        ax.set_ylabel("human score")
+        ax.set_xlim(0.5, 5.5)
+        ax.set_ylim(0.5, 5.5)
+        ax.set_xticks([1, 2, 3, 4, 5])
+        ax.set_yticks([1, 2, 3, 4, 5])
+        ax.grid(alpha=0.3)
+        ax.legend(loc="lower right", fontsize=8)
+
+    fig.suptitle("Judge vs human agreement (T4b.6 validation worksheet, jittered for display)")
+    fig.tight_layout()
+
+    resolved = resolve_path(out_path)
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(resolved, dpi=150)
+    plt.close(fig)
+    return resolved
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

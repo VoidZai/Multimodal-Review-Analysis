@@ -16,10 +16,12 @@ import pytest
 
 from cragb.bench.reference_answers import make_reference_answer
 from cragb.eval.judge_validation import (
+    build_paired_scores,
     build_sample,
     compute_agreement,
     export_worksheet,
     parse_worksheet,
+    plot_judge_human_agreement,
     render_worksheet,
     score_worksheet,
 )
@@ -371,3 +373,115 @@ class TestScoreWorksheet:
         # validation checks require.
         with pytest.raises(ValueError, match="is blank"):
             score_worksheet(worksheet_path, judge_scores_path, references_path, sample_size=4, seed=1)
+
+
+# --------------------------------------------------------------------------
+# build_paired_scores (T4b.8: split out of score_worksheet so the agreement
+# figure can use the raw per-row pairs, not just compute_agreement's summary)
+# --------------------------------------------------------------------------
+
+
+class TestBuildPairedScores:
+    def test_returns_one_row_per_sample_with_judge_and_human_columns(self, tmp_path, two_arm_fixture):
+        judge_scores, references = two_arm_fixture
+        judge_scores_path = tmp_path / "judge_scores.csv"
+        judge_scores.to_csv(judge_scores_path, index=False)
+        references_path = tmp_path / "references.jsonl"
+        _write_references_jsonl(references, references_path)
+
+        worksheet_path, rows = export_worksheet(
+            judge_scores_path, references_path, sample_size=4, seed=1, out_path=tmp_path / "worksheet.md"
+        )
+        text = worksheet_path.read_text(encoding="utf-8")
+        for row in rows:
+            for criterion, value in row.judge_scores.items():
+                text = text.replace(f"- {criterion}: \n", f"- {criterion}: {value}\n", 1)
+        worksheet_path.write_text(text, encoding="utf-8")
+
+        paired = build_paired_scores(worksheet_path, judge_scores_path, references_path, sample_size=4, seed=1)
+
+        assert len(paired) == 4
+        expected_cols = {"row_id", "arm", "question_id"} | {
+            f"{who}_{c}" for who in ("judge", "human") for c in ("correctness", "faithfulness", "completeness", "conciseness")
+        }
+        assert set(paired.columns) == expected_cols
+
+    def test_score_worksheet_equals_compute_agreement_of_build_paired_scores(self, tmp_path, two_arm_fixture):
+        # score_worksheet is now a thin wrapper -- lock down that it stays equivalent
+        # to calling the two pieces separately, which is exactly what the T4b.8 figure
+        # generation does.
+        judge_scores, references = two_arm_fixture
+        judge_scores_path = tmp_path / "judge_scores.csv"
+        judge_scores.to_csv(judge_scores_path, index=False)
+        references_path = tmp_path / "references.jsonl"
+        _write_references_jsonl(references, references_path)
+
+        worksheet_path, rows = export_worksheet(
+            judge_scores_path, references_path, sample_size=4, seed=1, out_path=tmp_path / "worksheet.md"
+        )
+        text = worksheet_path.read_text(encoding="utf-8")
+        for row in rows:
+            for criterion, value in row.judge_scores.items():
+                text = text.replace(f"- {criterion}: \n", f"- {criterion}: {value}\n", 1)
+        worksheet_path.write_text(text, encoding="utf-8")
+
+        via_wrapper = score_worksheet(worksheet_path, judge_scores_path, references_path, sample_size=4, seed=1)
+        paired = build_paired_scores(worksheet_path, judge_scores_path, references_path, sample_size=4, seed=1)
+        via_pieces = compute_agreement(paired)
+
+        pd.testing.assert_frame_equal(via_wrapper, via_pieces)
+
+    def test_raises_on_mismatched_worksheet_same_as_score_worksheet(self, tmp_path, two_arm_fixture):
+        judge_scores, references = two_arm_fixture
+        judge_scores_path = tmp_path / "judge_scores.csv"
+        judge_scores.to_csv(judge_scores_path, index=False)
+        references_path = tmp_path / "references.jsonl"
+        _write_references_jsonl(references, references_path)
+        export_worksheet(judge_scores_path, references_path, sample_size=4, seed=1, out_path=tmp_path / "worksheet.md")
+
+        stale_worksheet = tmp_path / "stale.md"
+        stale_worksheet.write_text(FILLED_BLOCK, encoding="utf-8")
+
+        with pytest.raises(ValueError, match="do not match the re-derived sample"):
+            build_paired_scores(stale_worksheet, judge_scores_path, references_path, sample_size=4, seed=99)
+
+
+# --------------------------------------------------------------------------
+# plot_judge_human_agreement
+# --------------------------------------------------------------------------
+
+
+class TestPlotJudgeHumanAgreement:
+    def _paired_and_agreement(self):
+        rows = []
+        for i in range(8):
+            rows.append(
+                {
+                    "row_id": f"R{i:02d}", "arm": "closed_book" if i % 2 else "rag_small", "question_id": f"q{i}",
+                    "judge_correctness": 1 + (i % 5), "human_correctness": 1 + ((i + 1) % 5),
+                    "judge_faithfulness": 5, "human_faithfulness": 5,
+                    "judge_completeness": 1 + (i % 5), "human_completeness": 1 + ((i + 2) % 5),
+                    "judge_conciseness": 5, "human_conciseness": 4 if i % 3 == 0 else 5,
+                }
+            )
+        paired = pd.DataFrame(rows)
+        agreement = compute_agreement(paired)
+        return paired, agreement
+
+    def test_writes_a_nonempty_png(self, tmp_path):
+        paired, agreement = self._paired_and_agreement()
+        out_path = plot_judge_human_agreement(paired, agreement, tmp_path / "agreement.png", seed=0)
+
+        assert out_path.is_file()
+        assert out_path.stat().st_size > 0
+
+    def test_creates_parent_directories(self, tmp_path):
+        paired, agreement = self._paired_and_agreement()
+        out_path = plot_judge_human_agreement(paired, agreement, tmp_path / "nested" / "dir" / "agreement.png", seed=0)
+        assert out_path.is_file()
+
+    def test_same_seed_is_reproducible_byte_for_byte(self, tmp_path):
+        paired, agreement = self._paired_and_agreement()
+        first = plot_judge_human_agreement(paired, agreement, tmp_path / "a.png", seed=7)
+        second = plot_judge_human_agreement(paired, agreement, tmp_path / "b.png", seed=7)
+        assert first.read_bytes() == second.read_bytes()
