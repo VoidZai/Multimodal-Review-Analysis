@@ -457,6 +457,42 @@ body suppresses this and returns a bare answer, confirmed with a live call. T4b.
 either set that flag or strip `<think>...</think>` before parsing the judge's JSON, or
 every judge call will fail to parse.
 
+### 14.5 — Cost had to be partly reconstructed after the fact (M5 T5.2/T5.4/T5.5)
+
+M5 (cost & latency, E6/G4) hit two gotchas that both trace back to the same root cause:
+`GroqClient.complete()` (T2.2, unchanged through T4a/T4b) returns only the completion
+*string* — it reads `data["choices"][0]["message"]["content"]` and throws the rest of the
+response body away, `usage` block included. `DiskCache` then stores only that string.
+Neither of these was a problem until M5 needed to cost and time calls that had already
+happened.
+
+**Token counts for the 180 T4b.2 transcripts don't exist anywhere.** Closed-book,
+RAG-small, and RAG-large were all generated before T5.2 added usage telemetry
+(`complete_with_usage`, a metadata sidecar on `DiskCache`), so none of those 180 cached
+responses carry a token count — and a cache **hit** can never recover one retroactively,
+because the original API response that had it is gone; only the completion text survived.
+T5.4's fix was to re-issue every transcript's *exact original request* through
+`complete_with_usage` (free — every one is a cache hit, since the payload is rebuilt
+byte-for-byte from what each transcript already saved: `context_text` for the RAG arms,
+run back through the same `render_prompt` the original generation call used) and accept
+that the sidecar will be empty for all of them, falling back to a documented
+`len(text) / 4` chars-per-token estimate flagged via an `is_estimated` column. The
+lesson, not just for this project: **log `usage` from the first API-calling line of
+code**, because a cache that stores only the answer makes the question "what did that
+already-answered call actually cost" unanswerable after the fact, not just inconvenient.
+
+**A cache hit's ~0ms latency would have made every G4 timing number fiction.** T5.5's
+end-to-end latency harness needs genuine wall-clock numbers, and the disk cache exists
+specifically to make repeat calls near-instant — exactly the opposite of what a latency
+measurement wants. `complete_with_usage` gained a `bypass_cache` flag that skips the
+cache on *both* the read and the write side when timing for real: not reading avoids the
+fake-latency problem; not writing avoids a live temperature>0 sample silently overwriting
+the canonical T4b.2 transcript with different (but not wrong) text. The live 45-call run
+(15 stratified questions × 3 arms) took ~5.5 real minutes end-to-end on Groq's free tier
+— slow enough to notice, but no rate-limit errors surfaced at this volume; a much larger
+sweep (e.g. a full 60-question run per arm, or repeats for a tighter CI) would be worth
+budgeting extra wall-clock for and watching for 429s, per PLAN.md §1.4 bottleneck #3.
+
 ---
 
 ### Open input needed from you
