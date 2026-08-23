@@ -16,6 +16,20 @@ credential — only the request *content* (model, messages, temperature,
 etc.) goes into the hash, so cache files never contain secrets and are
 safe to commit if ever desired (they currently are not — see
 `.gitignore`).
+
+**Metadata sidecars (T5.2; PLAN.md §3 E6, §8 G4).** `call()`/`get()`/`set()`
+are unchanged by T5.2 — every existing caller of `GroqClient.complete()`
+keeps working exactly as before, byte-identical cache keys included.
+Alongside them, `call_with_meta()` stores a second file per cache key,
+`<sha256>.meta.json`, holding whatever the caller wants recorded about the
+*call itself* (token usage, latency, model id) rather than the response
+text. This is what lets a cache **hit** on an old T4a/T4b response still
+report token counts later (T5.4 re-issues cached calls through
+`complete_with_usage` purely to read this sidecar) even though the
+response file alone never carried that information. A hit on an entry
+written before T5.2 existed has no sidecar; `call_with_meta` reports
+`meta=None` for it rather than raising, since "we don't know" is the
+honest answer, not an error.
 """
 
 from __future__ import annotations
@@ -58,6 +72,9 @@ class DiskCache:
     def _path_for(self, key: str) -> Path:
         return self._dir / f"{key}.json"
 
+    def _meta_path_for(self, key: str) -> Path:
+        return self._dir / f"{key}.meta.json"
+
     def get(self, payload: dict[str, Any]) -> Any | None:
         """Return the cached response for `payload`, or `None` on a miss."""
         path = self._path_for(_cache_key(payload))
@@ -91,3 +108,59 @@ class DiskCache:
         response = fn()
         self.set(payload, response)
         return response
+
+    def get_meta(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        """Return the sidecar metadata for `payload`, or `None` if none was ever stored.
+
+        `None` covers two indistinguishable-by-design cases: no call for this
+        payload has happened yet, or it has but was made before T5.2 (no
+        sidecar was ever written for it). Both mean "we don't know" to a
+        caller, which is exactly the behaviour `complete_with_usage` wants.
+        """
+        path = self._meta_path_for(_cache_key(payload))
+        if not path.is_file():
+            return None
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def set_meta(self, payload: dict[str, Any], meta: dict[str, Any]) -> None:
+        """Store `meta` as the sidecar for `payload`, alongside its response."""
+        path = self._meta_path_for(_cache_key(payload))
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2, sort_keys=True)
+            f.write("\n")
+
+    def call_with_meta(
+        self,
+        payload: dict[str, Any],
+        fn: Callable[[], tuple[Any, dict[str, Any]]],
+    ) -> tuple[Any, dict[str, Any] | None, bool]:
+        """Like `call`, but also persists and returns per-call metadata.
+
+        On a cache hit, the response comes back exactly as `call` would
+        return it, and `fn` is not invoked — but the metadata sidecar is
+        only as good as what a *previous* fresh call happened to store: an
+        entry from before T5.2 has none, so `meta` is `None` (see
+        `get_meta`). On a miss, `fn()` must return `(response, meta)`; both
+        are persisted (`response` via `set`, `meta` via `set_meta`) so a
+        future hit can report both.
+
+        Args:
+            payload: the JSON-serializable request, used as the cache key
+                (identical key derivation to `call`, so a call already
+                cached via `call()`/`complete()` is a hit here too).
+            fn: zero-argument callable performing the actual API call;
+                invoked only on a miss, returning `(response, meta)`.
+
+        Returns:
+            `(response, meta, cached)` — `meta` is `None` when no sidecar
+            exists for this key; `cached` is `True` iff this was a hit.
+        """
+        cached_response = self.get(payload)
+        if cached_response is not None:
+            logger.debug("cache hit (with-meta) for key %s", _cache_key(payload))
+            return cached_response, self.get_meta(payload), True
+        response, meta = fn()
+        self.set(payload, response)
+        self.set_meta(payload, meta)
+        return response, meta, False
