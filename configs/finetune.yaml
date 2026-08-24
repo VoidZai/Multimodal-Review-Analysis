@@ -37,6 +37,14 @@ paths:
   contexts_manifest_out: data/finetune/contexts_v1_manifest.json
   # T7.3 output (git-ignored; the cost table is the committed record)
   raw_pairs_out: data/finetune/raw_pairs_v1.jsonl
+  # Append-only bookkeeping log, one row per *attempted* context group (not per
+  # accepted example) -- the resumability source of truth. A context that yields zero
+  # accepted examples still writes a row here, so a resumed run never mistakes "the
+  # teacher produced nothing usable" for "this context was never attempted" and
+  # re-spends a call on it. Also carries each call's token/latency/cached fields, so
+  # ft_generation_cost_v1.csv reflects the true cumulative total across every resumed
+  # session, not just the last one.
+  raw_pairs_progress_out: data/finetune/raw_pairs_v1_progress.jsonl
   generation_cost_out: results/tables/ft_generation_cost_v1.csv
   # T7.4 output
   abstentions_out: data/finetune/abstentions_v1.jsonl

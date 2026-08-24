@@ -1,0 +1,2 @@
+model,n_calls,n_cache_hits,total_prompt_tokens,total_completion_tokens,mean_prompt_tokens,mean_completion_tokens,total_wall_clock_s,total_usd,n_calls_missing_usage
+openai/gpt-oss-120b,10,0,11907,9112,1190.7,911.2,125.26367499982007,0.00725325,0
