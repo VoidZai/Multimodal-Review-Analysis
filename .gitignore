@@ -14,6 +14,13 @@ data/photos/*
 !data/photos/.gitkeep
 !data/photos/manifest_v1.json
 
+# Fine-tuning data prep (T7.2+) -- regenerable from corpus_v1 + cragb_v1 under
+# the same seed; manifests are committed so composition/coverage numbers are
+# reproducible without regenerating the (large, synthetic) data itself.
+data/finetune/*
+!data/finetune/.gitkeep
+!data/finetune/*_manifest.json
+
 # Python
 __pycache__/
 *.pyc

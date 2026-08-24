@@ -1,0 +1,57 @@
+{
+  "created_at_utc": "2026-08-24T12:41:44.160202+00:00",
+  "seed": 42,
+  "corpus_sha256": "180c2f102922854374eebfa1e5df0977520435bafa6c89f29f67d3bd10fe91f4",
+  "config_hash": "42096c2ee07824a4344dcac4c8532c9a3d99f474be94de977887795f0646960a",
+  "n_groups": 377,
+  "per_category_counts": {
+    "colour_appearance": 67,
+    "defects": 11,
+    "durability": 15,
+    "fabric_quality": 83,
+    "fit_sizing": 100,
+    "occasion": 52,
+    "value": 49
+  },
+  "n_docs_excluded_as_cragb_evidence": 1097,
+  "n_parent_asins_excluded": 1070,
+  "photo_bearing_share": 0.8381962864721485,
+  "photo_bearing_target_share": 0.3,
+  "category_quota_report": {
+    "fit_sizing": {
+      "target": 100,
+      "actual": 100,
+      "shortfall": 0
+    },
+    "colour_appearance": {
+      "target": 67,
+      "actual": 67,
+      "shortfall": 0
+    },
+    "fabric_quality": {
+      "target": 83,
+      "actual": 83,
+      "shortfall": 0
+    },
+    "durability": {
+      "target": 67,
+      "actual": 15,
+      "shortfall": 52
+    },
+    "defects": {
+      "target": 67,
+      "actual": 11,
+      "shortfall": 56
+    },
+    "occasion": {
+      "target": 67,
+      "actual": 52,
+      "shortfall": 15
+    },
+    "value": {
+      "target": 49,
+      "actual": 49,
+      "shortfall": 0
+    }
+  }
+}

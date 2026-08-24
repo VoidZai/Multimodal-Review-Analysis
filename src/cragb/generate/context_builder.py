@@ -135,8 +135,16 @@ class ContextBlock:
     photo_flags: dict[str, bool]  # doc_id -> whether that review has a photo
 
 
-def _render_excerpt(doc_id: str, text: str, has_photo: bool, max_chars: int) -> str:
-    """One excerpt block, matching the schema `grounded_qa_v1.md` documents to the model."""
+def render_excerpt(doc_id: str, text: str, has_photo: bool, max_chars: int) -> str:
+    """One excerpt block, matching the schema `grounded_qa_v1.md` documents to the model.
+
+    Public (not module-private) deliberately: `cragb.finetune.sample_contexts` (T7.2)
+    renders training-context excerpts in this exact same `[doc_id] has_photo: yes/no\\n
+    <snippet>` shape, so a sampler-built context is indistinguishable, byte-for-byte, from
+    one `build_context` would have retrieved. Reimplementing this format string a second
+    time would risk exactly the training/inference skew T7.1's prompt-parity guarantee
+    exists to prevent.
+    """
     snippet = text.strip()[:max_chars]
     photo_flag = "yes" if has_photo else "no"
     return f"[{doc_id}] has_photo: {photo_flag}\n{snippet}"
@@ -206,7 +214,7 @@ def build_context(
         )
 
     excerpts = [
-        _render_excerpt(
+        render_excerpt(
             doc_id, lookup.text_by_id[doc_id], lookup.has_photo_by_id[doc_id], max_excerpt_chars
         )
         for doc_id in doc_ids

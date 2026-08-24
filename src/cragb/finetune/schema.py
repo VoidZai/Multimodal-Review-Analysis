@@ -85,7 +85,7 @@ class TrainingExample:
         question: the training question.
         context_text: the exact `$context_block` value to substitute into
             the prompt — i.e. already rendered the way
-            `cragb.generate.context_builder._render_excerpt` renders a
+            `cragb.generate.context_builder.render_excerpt` renders a
             retrieved excerpt (`[doc_id] has_photo: yes/no\\n<snippet>`,
             excerpts joined by a blank line), so a `ContextBlock` built
             from it and passed through `render_prompt` reproduces the same
