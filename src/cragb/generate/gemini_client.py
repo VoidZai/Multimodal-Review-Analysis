@@ -317,6 +317,13 @@ class GeminiClient:
             meta = {
                 "prompt_tokens": usage.get("promptTokenCount"),
                 "completion_tokens": usage.get("candidatesTokenCount"),
+                # Gemini 3.x's hidden "thinking" tokens (module docstring; confirmed
+                # live, T6.2) -- billed at the output rate but never appear in `text`,
+                # so a cost calculation using `completion_tokens` alone understates the
+                # real cost. Captured from the first call site rather than reconstructed
+                # later, per PLAN.md §14.5's lesson from Groq's original usage-discarding
+                # bug.
+                "thinking_tokens": usage.get("thoughtsTokenCount"),
                 "latency_s": t.elapsed_s,
                 "model": data.get("modelVersion") or self.model,
             }
@@ -335,6 +342,7 @@ class GeminiClient:
             latency_s=(None if cached else (meta.get("latency_s") if meta else None)),
             cached=cached,
             model=(meta.get("model") if meta else None) or self.model,
+            thinking_tokens=(meta.get("thinking_tokens") if meta else None),
         )
         self._log_call(result)
         return result

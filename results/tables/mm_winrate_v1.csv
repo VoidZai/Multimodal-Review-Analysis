@@ -1,0 +1,9 @@
+group,n_pairs,n_surfaced_win,n_control_win,n_tie,win_rate,ci_lo,ci_hi,p_value_vs_0.5_greater,tie_rate,order_agreement_rate
+overall,25,12,3,10,0.48,0.28,0.68,0.6549810171127319,0.4,0.88
+colour_appearance,4,3,0,1,0.75,0.25,1.0,0.3125,0.25,0.75
+defects,5,2,1,2,0.4,0.0,0.8,0.8125,0.4,1.0
+durability,4,1,0,3,0.25,0.0,0.75,0.9375,0.75,0.75
+fabric_quality,3,1,1,1,0.3333333333333333,0.0,1.0,0.875,0.3333333333333333,1.0
+fit_sizing,2,1,1,0,0.5,0.0,1.0,0.75,0.0,1.0
+occasion,5,4,0,1,0.8,0.4,1.0,0.1875,0.2,0.8
+value,2,0,0,2,0.0,0.0,0.0,1.0,1.0,1.0

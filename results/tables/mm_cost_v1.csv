@@ -1,0 +1,2 @@
+model,n_calls,n_pairs,total_prompt_tokens,total_completion_tokens,total_thinking_tokens,mean_usd_per_call,total_usd,wall_clock_s,calls_per_second
+gemini-3.5-flash-lite,50,25,110192,1901,2664,0.0008894020000000001,0.044470100000000005,0.34380090003833175,145.4330107757871

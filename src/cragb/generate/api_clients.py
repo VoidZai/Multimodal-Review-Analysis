@@ -69,6 +69,16 @@ class CompletionResult:
             a stored value from the original call.
         cached: whether this call was served from the disk cache.
         model: the Groq model id that produced `text`.
+        thinking_tokens: hidden reasoning-token count, for providers that
+            report one separately from `completion_tokens` (e.g. Gemini's
+            `usageMetadata.thoughtsTokenCount`, T6.2/T6.4/M6.md T6.5 --
+            `cragb.generate.gemini_client`). `None` for Groq (no such
+            field exists in its `usage` block) and for any cache hit on an
+            entry written before this field existed. Callers computing
+              cost must add this to `completion_tokens` for a provider
+            that bills thinking tokens at the output rate -- Gemini does
+            (confirmed live, `configs/vision_judge.yaml`); using
+            `completion_tokens` alone there understates the real cost.
     """
 
     text: str
@@ -77,6 +87,7 @@ class CompletionResult:
     latency_s: float | None
     cached: bool
     model: str
+    thinking_tokens: int | None = None
 
 
 class MissingAPIKeyError(RuntimeError):

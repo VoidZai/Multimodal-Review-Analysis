@@ -34,3 +34,33 @@ models:
     output_usd_per_1m: 3.00
     snapshot_date: "2026-08-23"
     source_url: https://console.groq.com/docs/model/qwen/qwen3.6-27b
+
+  # gemini-3.6-flash: kept for reference even though T6.5's vision judge no
+  # longer uses it -- its free tier caps at 20 requests/day per
+  # project/model (confirmed live from a 429 error body, T6.5), far below
+  # the ~50 calls the pilot needs. See configs/vision_judge.yaml's history
+  # comment. Standard-tier rate (not the free tier this project actually
+  # calls it under, same convention as every Groq entry above). Output
+  # rate covers visible completion tokens AND hidden "thinking" tokens
+  # together (Google bills them at one rate) -- callers must pass
+  # `completion_tokens + thinking_tokens` to cost_usd for this model, not
+  # `completion_tokens` alone.
+  gemini-3.6-flash:
+    input_usd_per_1m: 0.75
+    output_usd_per_1m: 3.75
+    snapshot_date: "2026-08-24"
+    source_url: https://ai.google.dev/gemini-api/docs/pricing
+
+  # T6.5's actual vision-evidence judge (configs/vision_judge.yaml), after
+  # gemini-3.6-flash's free-tier daily quota proved too small. Standard-tier
+  # rate. Confirmed live (T6.5): a trivial call's `usageMetadata` carried no
+  # `thoughtsTokenCount` field, so `thinking_tokens` is expected to stay
+  # `None`/0 for this model -- unlike gemini-3.6-flash, `completion_tokens`
+  # alone should already reflect the real billed output count, but
+  # `summarize_cost` adds `thinking_tokens` unconditionally regardless (it's
+  # 0 when absent), so this isn't a special case in code, just a note here.
+  gemini-3.5-flash-lite:
+    input_usd_per_1m: 0.30
+    output_usd_per_1m: 2.50
+    snapshot_date: "2026-08-24"
+    source_url: https://ai.google.dev/gemini-api/docs/pricing

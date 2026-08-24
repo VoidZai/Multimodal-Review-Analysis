@@ -14,19 +14,33 @@
 # vision-capable model at all. Google AI Studio is the second free-tier
 # provider PLAN.md §1.3 already names.
 #
-# Model: gemini-3.6-flash. gemini-2.5-flash (the choice T6.2's docs
-# initially reasoned to from Google's pricing pages) turned out to be dead
-# for this key: a live call returned HTTP 404 "This model
-# models/gemini-2.5-flash is no longer available to new users. Please
-# update your code to use models/gemini-3.6-flash" (confirmed live,
-# 2026-08-24) -- the model still appears in ListModels but is not actually
-# callable, so a docs page or a catalog listing is not sufficient
-# verification on its own; a live generateContent call is (the same lesson
-# PLAN.md §14.4 already applied to Groq's catalog). gemini-3.6-flash is
-# Google's own named replacement, confirmed live to be multimodal and
-# free-tier eligible. If this model is deprecated before the project's
-# final report, only this file needs to change (cragb.generate.gemini_client
-# has no version pinned in code).
+# Model: gemini-3.5-flash-lite (T6.5). Two prior choices both turned out
+# unusable live, each only discoverable by an actual generateContent call:
+#  1. gemini-2.5-flash -- HTTP 404 "This model models/gemini-2.5-flash is
+#     no longer available to new users. Please update your code to use
+#     models/gemini-3.6-flash" (2026-08-24). Still listed in ListModels,
+#     not actually callable -- a catalog listing is not verification, only
+#     a live call is (PLAN.md §14.4's lesson, recurring).
+#  2. gemini-3.6-flash -- callable and correct (T6.4's three-pair smoke
+#     test passed cleanly) but its free tier caps at
+#     GenerateRequestsPerDayPerProjectPerModel-FreeTier = 20 requests/day
+#     (confirmed live from the 429 error body's QuotaFailure detail,
+#     T6.5). T6.5's pilot needs 2 calls/pair; even the 25-pair pilot arm
+#     needs 50, well over 20/day, and the run died mid-batch on quota
+#     exhaustion. No public rate-limit table lists per-model RPD figures
+#     (ai.google.dev/gemini-api/docs/rate-limits punts to the AI Studio
+#     dashboard), so model selection here is necessarily live-call-driven.
+# gemini-3.5-flash-lite: confirmed live to be multimodal, free-tier
+# callable, and (unlike gemini-3.6-flash) its `usageMetadata` on a trivial
+# text call showed no `thoughtsTokenCount` field at all -- either no hidden
+# reasoning by default or none needed, which also removes T6.4's "silent
+# mid-JSON truncation from a thinking-token budget" risk category
+# entirely. Its exact daily quota is still unknown (Google publishes none);
+# if this model also exhausts mid-batch, the fix is the same: switch model
+# again, or ration calls across multiple days -- see
+# cragb.eval.run_multimodal_pilot's module docstring on why a mid-batch
+# failure is always resumable for free via the disk cache. If this model is
+# deprecated or its quota proves too small, only this file needs to change.
 #
 # Live gotcha worth knowing (the same class of issue bit T6.2 and T6.4):
 # gemini-3.6-flash spends part
@@ -57,7 +71,7 @@ paths:
 
 provider:
   name: gemini
-  model: gemini-3.6-flash
+  model: gemini-3.5-flash-lite
   api_base: https://generativelanguage.googleapis.com/v1beta
   api_key_env: GOOGLE_API_KEY
   # Deterministic scoring, not creative generation -- same reasoning as

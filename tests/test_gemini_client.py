@@ -174,6 +174,26 @@ class TestCompleteWithUsage:
         assert result.cached is False
         assert result.model == "gemini-3.6-flash-001"
 
+    def test_fresh_call_captures_thinking_tokens(self, tmp_path, monkeypatch):
+        # Gemini 3.x's hidden reasoning tokens (billed at the output rate,
+        # never in `text`) -- must round-trip onto CompletionResult, not be
+        # silently discarded the way Groq's usage block originally was
+        # (PLAN.md §14.5).
+        client = make_client(tmp_path)
+        monkeypatch.setattr(
+            client._session,
+            "post",
+            lambda url, **kw: FakeResponse(
+                "An answer.",
+                usage={"promptTokenCount": 42, "candidatesTokenCount": 7, "thoughtsTokenCount": 54},
+            ),
+        )
+        monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
+
+        result = client.complete_with_usage([TEXT_PART])
+
+        assert result.thinking_tokens == 54
+
     def test_missing_usage_metadata_reports_none_tokens_not_a_crash(self, tmp_path, monkeypatch):
         client = make_client(tmp_path)
         monkeypatch.setattr(client._session, "post", lambda url, **kw: FakeResponse("ok"))
@@ -183,6 +203,7 @@ class TestCompleteWithUsage:
 
         assert result.prompt_tokens is None
         assert result.completion_tokens is None
+        assert result.thinking_tokens is None
 
     def test_second_call_is_a_cache_hit_with_no_latency(self, tmp_path, monkeypatch):
         client = make_client(tmp_path)
