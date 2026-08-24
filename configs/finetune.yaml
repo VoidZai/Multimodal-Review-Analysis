@@ -27,6 +27,10 @@ paths:
   # -- this one asks the teacher to produce several question+answer pairs
   # from one context, returned as a JSON array).
   finetune_gen_prompt_template: src/cragb/generate/prompts/finetune_gen_v1.md
+  # T7.5's stage-2 judge -- the same prompt file T4b.4's answer-quality judge already
+  # uses (configs/judge.yaml), not a new one. Repeated here rather than read from that
+  # config so T7.5 doesn't need to load a second YAML file just for one path.
+  answer_judge_prompt_template: src/cragb/generate/prompts/answer_judge_v1.md
   # Same disk cache every other API-calling module in this project uses
   # (cragb.generate.api_cache.DiskCache), so a re-run never re-spends
   # free-tier quota on a context already answered.

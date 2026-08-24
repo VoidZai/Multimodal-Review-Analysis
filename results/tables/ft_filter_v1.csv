@@ -1,0 +1,7 @@
+slice,n_raw,n_dropped_citation_invalid,n_dropped_format,n_dropped_low_faithfulness,n_accepted,judge_n_calls,judge_n_cache_hits,judge_total_prompt_tokens,judge_total_completion_tokens,judge_total_usd
+overall,39,0,0,0,39,29.0,0.0,31132.0,2237.0,0.0253902
+category:fabric_quality,2,0,0,0,2,,,,,
+category:fit_sizing,36,0,0,0,36,,,,,
+category:value,1,0,0,0,1,,,,,
+is_abstention:False,29,0,0,0,29,,,,,
+is_abstention:True,10,0,0,0,10,,,,,
