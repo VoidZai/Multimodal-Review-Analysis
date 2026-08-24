@@ -22,15 +22,25 @@ equality, is what makes the check reachable at all once anything (a stray citati
 constructed abstention's exact phrase) has been appended to or matches the canonical
 string.
 
-This module has no `main()` and performs no I/O beyond the pure `to_dict`/`from_dict`
-JSON shape — it is deliberately just the schema + prompt-parity guarantee that every
-later M7 task (T7.2's context sampler, T7.3's teacher generation, T7.4's constructed
-abstentions, T7.5's filter, T7.6's split) builds `TrainingExample` records against.
+This module has no `main()`. Its only I/O is the generic, whole-file JSONL
+write/load pair at the bottom (`write_training_examples_jsonl`/
+`load_training_examples_jsonl`) — otherwise it is deliberately just the schema +
+prompt-parity guarantee that every later M7 task (T7.2's context sampler, T7.3's teacher
+generation, T7.4's constructed abstentions, T7.5's filter, T7.6's split) builds
+`TrainingExample` records against. The generic pair is here (the type's home module)
+rather than in any one producer module, since more than one producer now needs it: T7.3's
+`cragb.finetune.generate_pairs` owns its own *append*-mode variant (needed only for that
+module's resumable, incremental API-calling pipeline — see its module docstring), while
+T7.4's `cragb.finetune.abstentions` is a purely local, one-shot computation that reads
+T7.3's full output back and writes its own output in one pass, so it uses this plain
+overwrite-mode pair instead of duplicating T7.3's resumability-specific logic.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from string import Template
 from typing import Any
 
@@ -39,6 +49,7 @@ from cragb.bench.taxonomy import CATEGORY_KEYWORDS
 from cragb.generate.context_builder import ContextBlock
 from cragb.generate.grounded_qa import load_prompt_template
 from cragb.generate.grounded_qa import render_prompt as _render_grounded_prompt
+from cragb.utils.io import resolve_path
 
 # The one prompt template every training example is rendered against —
 # T4a.1's versioned grounded-QA prompt, the same file every inference-time
@@ -225,3 +236,36 @@ def to_chat_messages(example: TrainingExample, template: Template | None = None)
         {"role": "user", "content": prompt},
         {"role": "assistant", "content": example.answer},
     ]
+
+
+def write_training_examples_jsonl(examples: list[TrainingExample], out_path: str | Path) -> Path:
+    """Write `examples` as newline-delimited JSON, one object per line.
+
+    Overwrites `out_path` (unlike `cragb.finetune.generate_pairs
+    .append_training_examples_jsonl`, which appends for that module's resumable
+    pipeline) — the right default for a one-shot, purely local computation like T7.4's
+    `cragb.finetune.abstentions.build_abstentions`, where re-running from scratch is
+    always correct and appending would silently duplicate every example on a re-run.
+    """
+    resolved = resolve_path(out_path)
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    with resolved.open("w", encoding="utf-8") as f:
+        for example in examples:
+            f.write(json.dumps(example.to_dict(), ensure_ascii=False))
+            f.write("\n")
+    return resolved
+
+
+def load_training_examples_jsonl(path: str | Path) -> list[TrainingExample]:
+    """Load `TrainingExample`s from a JSONL file (either write mode above produces the
+    same line shape, so this reads output from `write_training_examples_jsonl` or
+    `cragb.finetune.generate_pairs.append_training_examples_jsonl` interchangeably).
+    """
+    examples: list[TrainingExample] = []
+    with resolve_path(path).open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            examples.append(TrainingExample.from_dict(json.loads(line)))
+    return examples
