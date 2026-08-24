@@ -1,0 +1,186 @@
+# Fine-tuning data-prep configuration (T7.1; PLAN.md §3 E8, §10, M7.md).
+#
+# One config for the whole M7 chain (T7.2 sampling -> T7.3 generation -> T7.4
+# abstentions -> T7.5 filter -> T7.6 split), so every knob T7.2-T7.6 need is
+# fixed here, in one place, before any of that code is written -- no magic
+# numbers scattered across five modules. Sections below are grouped by which
+# task consumes them; a task that hasn't been built yet still has its knobs
+# defined here, exactly as T2.1's configs/taxonomy.yaml fixed T2.2-T2.7's
+# knobs before those tasks existed.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+  taxonomy_config: configs/taxonomy.yaml
+  # CRAGB's evidence -- excluded from training contexts (T7.2) and checked
+  # against for leakage (T7.6). Both files already exist (T2.6/T2.10).
+  cragb_questions_in: benchmark/cragb_v1.jsonl
+  cragb_pools_in: benchmark/pools_v1.jsonl
+  cragb_leakage_manifest: benchmark/cragb_v1_leakage_manifest.json
+  # T7.1's fixed rendering template -- see schema.py's
+  # DEFAULT_PROMPT_TEMPLATE_PATH; repeated here so config-driven callers
+  # (T7.2's contexts, T7.9's prompt-length probe) don't need to import the
+  # Python constant just to know the path.
+  grounded_qa_prompt_template: src/cragb/generate/prompts/grounded_qa_v1.md
+  # New prompt T7.3 writes (not the inference-time grounded_qa_v1.md above
+  # -- this one asks the teacher to produce several question+answer pairs
+  # from one context, returned as a JSON array).
+  finetune_gen_prompt_template: src/cragb/generate/prompts/finetune_gen_v1.md
+  # Same disk cache every other API-calling module in this project uses
+  # (cragb.generate.api_cache.DiskCache), so a re-run never re-spends
+  # free-tier quota on a context already answered.
+  cache_dir: results/cache/api
+
+  # T7.2 output
+  contexts_out: data/finetune/contexts_v1.jsonl
+  contexts_manifest_out: data/finetune/contexts_v1_manifest.json
+  # T7.3 output (git-ignored; the cost table is the committed record)
+  raw_pairs_out: data/finetune/raw_pairs_v1.jsonl
+  generation_cost_out: results/tables/ft_generation_cost_v1.csv
+  # T7.4 output
+  abstentions_out: data/finetune/abstentions_v1.jsonl
+  # T7.5 output
+  filtered_pairs_out: data/finetune/filtered_pairs_v1.jsonl
+  filter_report_out: results/tables/ft_filter_v1.csv
+  # T7.6 output
+  train_out: data/finetune/train.jsonl
+  val_out: data/finetune/val.jsonl
+  probe_out: data/finetune/probe.jsonl
+  split_manifest_out: data/finetune/split_manifest_v1.json
+
+# T7.2 -- training-context sampler
+sampling:
+  n_contexts: 500
+  # Reviews per context group. Must match configs/grounded_qa.yaml's
+  # retrieval.k (5): a training context needs to look like the k=5 context
+  # a real RAG-small inference call would retrieve, or T7.1's prompt-parity
+  # guarantee is rendering the right *shape* of prompt around the wrong
+  # *size* of context.
+  k: 5
+  # Per-review truncation length, matching
+  # cragb.generate.context_builder.DEFAULT_MAX_EXCERPT_CHARS exactly -- a
+  # training excerpt must be rendered by the same truncation rule a real
+  # retrieved excerpt is, or the model is trained on differently-shaped
+  # text than it is served.
+  max_review_chars: 600
+  # Per-category context-group quotas, proportional to
+  # benchmark/taxonomy.md's target_count mix (12:8:10:8:8:8:6 of 60),
+  # scaled to n_contexts=500. Sums to exactly n_contexts.
+  category_quotas:
+    fit_sizing: 100
+    colour_appearance: 67
+    fabric_quality: 83
+    durability: 67
+    defects: 67
+    occasion: 67
+    value: 49
+  # Deliberately over-sample image-bearing groups relative to the corpus's
+  # ~13.5% image-bearing rate (PLAN.md §14.6), so the model sees the
+  # `has_photo: yes` + photo-citation rule in training often enough to
+  # practice it.
+  photo_bearing_target_share: 0.30
+
+# T7.3 -- teacher generation (distillation from the RQ1 "large" arm)
+generation:
+  provider:
+    name: groq
+    # openai/gpt-oss-120b: the same RQ1 "large" arm model
+    # (configs/grounded_qa_large.yaml), so T7.3's construction is
+    # explicitly framed as distillation -- the small local model is being
+    # taught the large model's grounding/citation discipline (PLAN.md
+    # §10), not new facts.
+    model: openai/gpt-oss-120b
+    api_base: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    # Some diversity across the ~3 questions drafted per context is wanted
+    # (unlike grounded_qa.yaml's 0.2 -- that call must reproduce one
+    # answer reliably; this call is closer to T2.2's question-drafting
+    # call, which uses 0.7 for the same reason).
+    temperature: 0.6
+    # A JSON array of ~3 (question, answer) pairs is larger than a single
+    # grounded answer; gpt-oss-120b is a reasoning model whose hidden
+    # chain-of-thought is billed under the same max_tokens cap
+    # (grounded_qa.yaml's §14.4-documented behaviour) -- generous headroom
+    # so reasoning tokens don't starve the visible JSON the way a
+    # too-small cap did at T4a.3 build time.
+    max_tokens: 2500
+    timeout_s: 45
+    max_retries: 5
+  questions_per_context: 3
+  # difflib SequenceMatcher ratio above which two drafted questions from
+  # the *same* context are treated as near-duplicates and one is dropped.
+  # Matches configs/generate.yaml's dedup.near_duplicate_threshold.
+  near_duplicate_threshold: 0.9
+
+# T7.4 -- constructed correct-abstention examples
+abstention:
+  # Target share of the accepted training set that is abstention examples,
+  # comparable to CRAGB's 11/60 (~18%) authored-negative design intent,
+  # rounded up slightly since T7.4's constructions are structurally
+  # guaranteed correct in a way hand-authored negatives were not (PLAN.md
+  # §14.2).
+  target_share: 0.25
+  methods: [transplant, categorical_absence, evidence_stripped]
+  # `transplant`: reject a (question from A, context B) pairing if any
+  # content word of the question appears in B's text above this ratio
+  # (difflib SequenceMatcher over the question's content words vs B's
+  # text) -- guards against an accidentally-answerable transplant.
+  transplant_overlap_threshold: 0.15
+  # `evidence_stripped`: after removing a positive answer's cited
+  # documents from its context, at least this many documents must remain
+  # (a context stripped to zero documents is a different, degenerate
+  # case, not the "looks relevant but doesn't support the claim" case
+  # this method exists to teach).
+  evidence_stripped_min_remaining_docs: 1
+
+# T7.5 -- quality filter
+filter:
+  # Deterministic stage (citation validity, format compliance) always
+  # runs, unconditionally, via cragb.eval.citation_validity /
+  # cragb.bench.reference_answers.extract_citations -- no config knob
+  # needed, it is not optional.
+  #
+  # Judged stage: keep ONLY faithfulness. results/tables
+  # /judge_validation_v1.csv (T4b.6): faithfulness kappa=0.597 is the only
+  # criterion above the 0.4 usability bar (correctness kappa=-0.151,
+  # completeness 0.243, conciseness 0.321 are all below it). Filtering
+  # training data on an unvalidated criterion would dress up an unreliable
+  # instrument as quality control -- deliberately not done here.
+  faithfulness_threshold: 4
+  judge:
+    provider:
+      name: groq
+      # Same distinct-family judge as T4b.4 (configs/judge.yaml), for the
+      # same self-preference-bias reason (PLAN.md §9): the teacher here is
+      # gpt-oss-120b, so scoring its faithfulness with a gpt-oss judge
+      # would be the family scoring its own output.
+      model: qwen/qwen3.6-27b
+      api_base: https://api.groq.com/openai/v1
+      api_key_env: GROQ_API_KEY
+      temperature: 0.0
+      max_tokens: 500
+      reasoning_effort: "none"
+      timeout_s: 30
+      max_retries: 5
+
+# T7.6 -- leakage/near-duplicate guard + train/val/probe split
+split:
+  val_fraction: 0.10
+  # Balanced behaviour-probe set, held out entirely -- CRAGB's own
+  # is_abstention count is only 2 of 60 (PLAN.md §14.2), too small to
+  # support a go/no-go abstention-accuracy threshold on its own, so this
+  # is what T7.10's rule is actually written against.
+  probe_answerable_count: 40
+  probe_abstention_count: 40
+  # No product straddles a split -- grouped by this column.
+  grouping_key: parent_asin
+  # Layer 2 of the leakage guard, on top of cragb.bench.assemble's
+  # exact-hash check (layer 1): difflib ratio against all 60 CRAGB
+  # questions above this threshold is dropped as a near-duplicate.
+  near_duplicate_threshold: 0.85
+  # Layer 3 (semantic backstop, C:\venv\cragb only -- see M7.md T7.6):
+  # embedding-cosine similarity against all 60 CRAGB questions above this
+  # threshold is also dropped.
+  embedding_similarity_threshold: 0.85
+  embedding_model: BAAI/bge-small-en-v1.5
