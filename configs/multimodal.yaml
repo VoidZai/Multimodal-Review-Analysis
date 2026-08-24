@@ -8,6 +8,10 @@ paths:
   corpus_in: data/processed/corpus_v1.parquet
   pairs_out: results/tables/mm_pairs_v1.jsonl
   coverage_out: results/tables/mm_coverage_v1.csv
+  # T6.7's appendix renderer (cragb.eval.render_multimodal_examples) reads
+  # pairs_out back in (as pairs_in) alongside T6.5's verdicts.
+  verdicts_in: results/tables/mm_verdicts_v1.jsonl
+  examples_out: reports/multimodal_examples_v1.md
 
 corpus:
   image_col: has_image

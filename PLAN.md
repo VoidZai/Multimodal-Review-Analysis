@@ -203,7 +203,7 @@ Format per experiment: **Objective · RQ · Input · Preprocessing · Baseline �
 | M4a Grounded prompt (E4) | Component 1 core | prompt v1, transcripts | 0.5 wk | M1 | `feat(prompt): grounded QA + citations` | prompt file |
 | M4b Answer eval (E5) | RQ0/RQ1 + judge | judge, validation table, RQ0/RQ1 tables | 1.5 wk | M2,M3,M4a | `feat(eval): rubric judge + human κ` | results |
 | M5 Cost/latency (E6) | G4 | cost table, Pareto scatter | 0.5 wk | M3,M4b | `feat(eval): cost & latency harness` | results |
-| M6 Visual pilot (E7) | RQ4 | vision-judge win-rate, examples | 1 wk | M2,M3 | `feat(mm): photo evidence pilot` | results |
+| M6 Visual pilot (E7) ✅ | RQ4 | photo store + pairing + order-swap vision judge (Gemini) + win-rate CI + human κ spot-check + figure #6 + appendix | 1 wk | M2,M3 | `feat(mm): photo evidence pilot` | `mm_winrate_v1.csv`, `mm_spotcheck_v1.csv`, `mm_photo_winrate_v1.png`, `multimodal_examples_v1.md` |
 | M7 FT prep + plan (E8) | RQ3 setup | train/val sets, go/no-go doc | 1 wk | M2,M4b | `feat(ft): synthetic data + FT plan` | jsonl, doc |
 | **MID-PROGRESS REPORT** | Write-up | report + appendix | 1 wk | M1–M7 | `docs: mid-progress report` | PDF |
 | M8 (2nd half) FT exec | RQ3 result | LoRA runs, RQ3 tables | — | M7 | `feat(ft): qlora runs + eval` | adapters |
@@ -492,6 +492,92 @@ the canonical T4b.2 transcript with different (but not wrong) text. The live 45-
 — slow enough to notice, but no rate-limit errors surfaced at this volume; a much larger
 sweep (e.g. a full 60-question run per arm, or repeats for a tighter CI) would be worth
 budgeting extra wall-clock for and watching for 429s, per PLAN.md §1.4 bottleneck #3.
+
+---
+
+### 14.6 — Multimodal pilot (M6/E7): provider switches, real coverage, and an honest null result
+
+M6 (the multimodal grounding pilot, RQ4/G3) was the milestone with the most live-call
+surprises of the project so far — three of its six tasks (T6.2, T6.4, T6.5) each hit a
+real, undiscoverable-except-by-calling-it blocker. None of them were coding bugs in the
+usual sense; all were the gap between what a docs page/catalog claims and what a live
+API call actually does, the same class of lesson §14.4 already logged for Groq.
+
+**Why Gemini exists in this codebase at all.** T6.2's live check of Groq's catalog
+(§14.4's 2026-08-19 snapshot, 13 models) confirmed no model on it accepts image input —
+`gpt-oss-{20b,120b}` and `qwen/qwen3.6-27b` are text-only, and the rest are TTS/ASR/
+classifiers. PLAN.md §1.3 already named Google AI Studio as the project's second
+free-tier provider, so `cragb.generate.gemini_client.GeminiClient` was added
+(T6.2) behind the exact same `complete`/`complete_with_usage` shape as `GroqClient` —
+additive, not a replacement; every Groq-backed M1–M5 result is untouched. This is the
+reason `GOOGLE_API_KEY` is now in `.env.example`: nothing else in the project needs it,
+only the vision judge.
+
+**Model choice took three live attempts, not one.** `gemini-2.5-flash` (T6.2's first
+choice, reasoned from Google's pricing docs) returned HTTP 404 "no longer available to
+new users" on an actual call, despite still appearing in `ListModels` — a catalog listing
+is not verification, exactly §14.4's Groq lesson recurring on a different provider.
+`gemini-3.6-flash` (T6.2/T6.4, Google's own named replacement) worked correctly through
+all of T6.4's validation, but T6.5's live batch run died on HTTP 429: its free tier caps
+at **20 `generateContent` requests per day per project per model** (read directly from
+the 429 error body's `QuotaFailure` detail — Google publishes no public per-model RPD
+table, so this is only discoverable by exhausting it), nowhere near the ~50 calls a
+25-pair pilot needs. `gemini-3.5-flash-lite` (final choice) has worked without a quota
+failure since. **Separately**, `gemini-3.6-flash`'s hidden "thinking" tokens
+(`usageMetadata.thoughtsTokenCount`, billed at the output rate, never in `text`)
+silently truncated a real multimodal judge call mid-JSON at `max_tokens=300` — not the
+clean empty-candidate case a smoke test at T6.2 had already handled, but a *different*
+failure shape (a parseable-looking but cut-off JSON object) that slips past that
+check entirely. Fixed by raising to 700, confirmed live. `gemini-3.5-flash-lite`
+carries no `thoughtsTokenCount` field at all, removing this risk category for the model
+actually in use.
+
+**Amazon's CDN was healthy.** T6.1's real fetch over the 123 candidate URLs (first
+image of every has-image doc in the retrieval pool of an image-target question) got
+**122 `ok`, 1 `http_error`** (99.2%) — the one failure a dead
+`images-na.ssl-images-amazon.com` legacy host, not a rate limit or a systemic problem.
+
+**The real coverage funnel came in well under the naive per-question-image-coverage
+estimate, and the drop happened at a different stage than expected.** T6.3's live run:
+
+```
+60 total questions → 49 image_target → 25 photo_in_context → 25 fetchable_bytes → 25 usable_pairs
+```
+
+All 24 dropped questions fell out at the *same* stage — RAG-small's actual retrieved
+context (BM25, k=5, `configs/grounded_qa.yaml`) simply didn't happen to include an
+image-bearing doc, even though the broader 20-doc pool used for CRAGB pooling often did.
+This is a property of the pipeline as built (a narrow top-5 context has a much lower
+chance of catching the ~13.5% image-bearing minority than pooling's top-20 union did),
+not a fetch failure or a labelling gap — and it is exactly the risk PLAN.md §3 E7 named
+in advance ("too few image-bearing questions → underpowered"), just materialising via
+retrieval breadth rather than raw image scarcity.
+
+**Order-swap did catch real position bias, not zero.** `order_agreement_rate` across the
+25 judged pairs was **0.88** (22/25) — 3 pairs where the two photo orders disagreed with
+each other, each correctly folded into `tie` rather than credited as a win either
+direction (`cragb.multimodal.vision_judge.judge_pair`). Not a large fraction, but a
+real, live-confirmed instance of the exact failure mode the control exists to prevent —
+without it, up to 3 of the 12 raw single-order "wins" could have been position artifacts
+rather than genuine preference.
+
+**RQ4's headline is an honest null result, not a finding to spin.** n=25 usable pairs
+(below the ~30 threshold flagged before any judge quota was spent) gave **win-rate 0.48,
+95% CI [0.28, 0.68], p=0.655 (one-sided vs 0.5)** — the CI brackets the null, so this is
+underpowered at this sample size, reported as such rather than fished for a
+per-question-type subgroup that clears significance. The human spot-check (T6.6, n=15)
+adds a second, independent reliability caveat: **Cohen's κ=0.20**, below the 0.4
+usability bar. Reading the actual disagreements (not just the number) matters here: every
+row where the human and the judge both said "A" agreed (7/7); nearly every disagreement
+is the judge calling `tie` where the human saw a marginal winner, plus one case
+(`fit_sizing_010`, kept as a worked example in `reports/multimodal_examples_v1.md`) where
+the judge's reasoning (a worn watch shows real on-body fit; a boxed necklace shows none)
+is arguably *more* defensible than the human's first instinct (favouring the necklace
+because it's the actual reviewed product) — genuine reasonable disagreement on a
+subjective task, at a very small sample, not an obviously broken judge. Both the win-rate
+and the κ belong in the report exactly as measured; a photo-evidence result with n=25 and
+a validated instrument would look different, and that difference is the honest scope of
+what a pilot at this scale can claim.
 
 ---
 
