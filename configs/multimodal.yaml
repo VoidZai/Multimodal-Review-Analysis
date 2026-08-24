@@ -1,0 +1,37 @@
+# Surfaced-vs-control photo pairing configuration (T6.3; PLAN.md §3 E7, M6.md T6.3).
+
+seed: 42
+
+paths:
+  questions_in: benchmark/cragb_v1.jsonl
+  rag_small_transcripts_in: results/tables/answer_gen_rag_small_v1.jsonl
+  corpus_in: data/processed/corpus_v1.parquet
+  pairs_out: results/tables/mm_pairs_v1.jsonl
+  coverage_out: results/tables/mm_coverage_v1.csv
+
+corpus:
+  image_col: has_image
+  image_urls_col: image_urls
+
+# Mirrors configs/photo_store.yaml's `store` section, duplicated (not
+# cross-loaded) so this module's fetch behaviour doesn't silently change
+# if someone edits photo_store.yaml for an unrelated T6.1 reason.
+photo_store:
+  photos_dir: data/photos
+  max_bytes: 5000000
+  timeout_s: 20
+  max_retries: 5
+  request_delay_s: 0.2
+  allowed_mime: [image/jpeg, image/png, image/webp]
+
+pairing:
+  # Scan the full RAG-small context (k=5, configs/grounded_qa.yaml) for a
+  # photo-bearing doc -- null means no cap. Capping this to fewer than the
+  # pipeline actually retrieves would understate what a real user sees.
+  top_k: null
+  # Distinct eligible corpus rows to try before giving up on finding a
+  # fetchable control photo for a question. ~30000 image-bearing rows in
+  # corpus_v1 minus a handful excluded per question leaves plenty of room;
+  # 200 trials is far more than should ever be needed in practice and only
+  # matters if the CDN is having a bad day.
+  max_control_attempts: 200

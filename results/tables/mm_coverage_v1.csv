@@ -1,0 +1,6 @@
+stage,count,description
+total_questions,60,all CRAGB v1 questions
+image_target,49,questions flagged image_target=true (T2.3)
+photo_in_context,25,"image-target questions whose RAG-small retrieved context contains >=1 has-image doc, with a usable transcript"
+fetchable_bytes,25,"of those, the surfaced photo AND a control photo both resolved to real, fetchable bytes"
+usable_pairs,25,pairs written to mm_pairs_v1.jsonl (== fetchable_bytes; every fetchable pair is handed to T6.5's judge)
