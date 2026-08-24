@@ -1,0 +1,89 @@
+{
+  "created_at_utc": "2026-08-24T18:54:41.123926+00:00",
+  "seed": 42,
+  "n_input": 39,
+  "n_dropped_exact_leak": 0,
+  "exact_leak_example_ids": [],
+  "n_dropped_near_duplicate": 7,
+  "near_duplicate_matches": [
+    {
+      "example_id": "ctx_fit_sizing_0005_00",
+      "cragb_question_id": "fit_sizing_001",
+      "method": "embedding",
+      "score": 0.8085808157920837
+    },
+    {
+      "example_id": "ctx_fit_sizing_0006_00",
+      "cragb_question_id": "fit_sizing_000",
+      "method": "embedding",
+      "score": 0.8047916889190674
+    },
+    {
+      "example_id": "ctx_fit_sizing_0008_01",
+      "cragb_question_id": "fit_sizing_001",
+      "method": "embedding",
+      "score": 0.8174318075180054
+    },
+    {
+      "example_id": "ctx_fit_sizing_0009_00",
+      "cragb_question_id": "fit_sizing_000",
+      "method": "embedding",
+      "score": 0.8473378419876099
+    },
+    {
+      "example_id": "ctx_fit_sizing_0009_01",
+      "cragb_question_id": "fit_sizing_001",
+      "method": "embedding",
+      "score": 0.8044570684432983
+    },
+    {
+      "example_id": "abst_transplant_0001",
+      "cragb_question_id": "fit_sizing_001",
+      "method": "embedding",
+      "score": 0.8085808157920837
+    },
+    {
+      "example_id": "abst_evidence_stripped_0002",
+      "cragb_question_id": "fit_sizing_001",
+      "method": "embedding",
+      "score": 0.8174318075180054
+    }
+  ],
+  "embedding_backstop_used": true,
+  "n_kept": 32,
+  "train": {
+    "n": 0,
+    "n_answerable": 0,
+    "n_abstention": 0,
+    "per_category": {}
+  },
+  "val": {
+    "n": 0,
+    "n_answerable": 0,
+    "n_abstention": 0,
+    "per_category": {}
+  },
+  "probe": {
+    "n": 32,
+    "n_answerable": 24,
+    "n_abstention": 8,
+    "per_category": {
+      "fabric_quality": 2,
+      "fit_sizing": 29,
+      "value": 1
+    }
+  },
+  "parent_asin_disjointness": {
+    "train_val_overlap": 0,
+    "train_probe_overlap": 0,
+    "val_probe_overlap": 0
+  },
+  "config": {
+    "val_fraction": 0.1,
+    "probe_answerable_count": 40,
+    "probe_abstention_count": 40,
+    "near_duplicate_threshold": 0.85,
+    "embedding_similarity_threshold": 0.8,
+    "embedding_model": "BAAI/bge-small-en-v1.5"
+  }
+}

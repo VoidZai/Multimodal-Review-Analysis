@@ -17,9 +17,13 @@ data/photos/*
 # Fine-tuning data prep (T7.2+) -- regenerable from corpus_v1 + cragb_v1 under
 # the same seed; manifests are committed so composition/coverage numbers are
 # reproducible without regenerating the (large, synthetic) data itself.
+# Pattern is *manifest*.json, not *_manifest.json, because naming isn't
+# consistent across tasks: T7.2's is contexts_v1_manifest.json (suffix) but
+# T7.6's is split_manifest_v1.json (infix, per M7.md's own artifact name) --
+# a stricter suffix-only pattern silently missed the latter until caught here.
 data/finetune/*
 !data/finetune/.gitkeep
-!data/finetune/*_manifest.json
+!data/finetune/*manifest*.json
 
 # Python
 __pycache__/

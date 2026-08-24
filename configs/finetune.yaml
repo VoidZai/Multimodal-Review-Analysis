@@ -185,14 +185,32 @@ split:
   # is what T7.10's rule is actually written against.
   probe_answerable_count: 40
   probe_abstention_count: 40
-  # No product straddles a split -- grouped by this column.
-  grouping_key: parent_asin
+  # No product straddles a split -- every TrainingExample this project constructs
+  # carries exactly one source_parent_asins entry (T7.6's cragb.finetune.split
+  # ._group_by_parent_asin), so parent_asin is the only grouping key that's ever
+  # meaningful here; not exposed as a config knob since there is no second option.
+  #
   # Layer 2 of the leakage guard, on top of cragb.bench.assemble's
   # exact-hash check (layer 1): difflib ratio against all 60 CRAGB
   # questions above this threshold is dropped as a near-duplicate.
   near_duplicate_threshold: 0.85
   # Layer 3 (semantic backstop, C:\venv\cragb only -- see M7.md T7.6):
   # embedding-cosine similarity against all 60 CRAGB questions above this
-  # threshold is also dropped.
-  embedding_similarity_threshold: 0.85
+  # threshold is also dropped. Calibrated empirically against
+  # BAAI/bge-small-en-v1.5 at T7.6 build time (not the a-priori 0.85 this
+  # field originally held at T7.1, before any real embeddings existed to
+  # check it against) -- live cosine scores against the CRAGB question
+  # "Do these run true to size?": a near-identical reword ("Does this
+  # product run true to size?") scored 0.884; a genuine no-shared-surface
+  # -form paraphrase ("Is the sizing accurate, or does it run small or
+  # large?") scored only 0.740; legitimately different same-topic
+  # questions ("Do the elastic waistbands stay in place during
+  # exercise?") scored 0.55-0.65. A 0.85 threshold would have made this
+  # layer catch almost nothing difflib doesn't already catch, defeating
+  # its purpose as a semantic backstop. 0.80 is chosen deliberately on
+  # the aggressive side of that gap: per this module's own stated risk
+  # asymmetry (a missed leak silently invalidates every downstream RQ3
+  # result; a wrongly-dropped example just costs one row out of
+  # hundreds), erring toward dropping more is the safer failure mode.
+  embedding_similarity_threshold: 0.80
   embedding_model: BAAI/bge-small-en-v1.5
