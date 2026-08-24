@@ -7,6 +7,13 @@ data/processed/*
 !data/processed/*_manifest.json
 !data/processed/*_datasheet.md
 
+# Photo bytes (T6.1) -- regenerable from image_urls via
+# cragb.multimodal.photo_store; the coverage manifest is committed so RQ4's
+# coverage numbers are reproducible even if a CDN link later dies.
+data/photos/*
+!data/photos/.gitkeep
+!data/photos/manifest_v1.json
+
 # Python
 __pycache__/
 *.pyc

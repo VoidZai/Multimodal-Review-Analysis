@@ -1,0 +1,31 @@
+# Photo byte store configuration (T6.1; PLAN.md §3 E7, M6.md T6.1).
+#
+# Scope of the `fetch` command: the first image URL of every has-image doc
+# that appears in the retrieval pool (pools_v1.jsonl, T2.6) of a CRAGB
+# question T2.3 flagged `image_target: true`. This is the candidate
+# universe T6.3's surfaced/control photo linking draws from — fetching it
+# here means neither T6.3 nor T6.4 ever blocks on a live HTTP call to
+# Amazon's CDN.
+
+paths:
+  questions_in: benchmark/cragb_questions_v1.jsonl
+  pools_in: benchmark/pools_v1.jsonl
+  corpus_in: data/processed/corpus_v1.parquet
+  manifest_out: data/photos/manifest_v1.json
+
+corpus:
+  image_col: has_image
+  image_urls_col: image_urls
+
+store:
+  photos_dir: data/photos
+  # 5 MB is generous for a review photo (typically a few hundred KB) and
+  # cheap insurance against a pathological response.
+  max_bytes: 5000000
+  timeout_s: 20
+  max_retries: 5
+  # Fixed pause between live (non-cache-hit) requests -- fetch_many is a
+  # one-shot batch over ~100-150 URLs, not a repeated hot path, so a flat
+  # delay is simpler than a rate limiter and plenty polite to a public CDN.
+  request_delay_s: 0.2
+  allowed_mime: [image/jpeg, image/png, image/webp]
