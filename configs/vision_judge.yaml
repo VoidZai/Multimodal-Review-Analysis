@@ -1,6 +1,13 @@
 # Vision-evidence judge configuration (T6.2 provider half; T6.4 completes the
 # prompt/rubric half). PLAN.md §3 E7, §8 G3, M6.md T6.2/T6.4.
 #
+# T6.4's order-swap control (not a config knob -- always on): every pair is
+# judged twice, once with the surfaced photo as Photo A and once swapped, and
+# only counts as a surfaced-photo win if it wins both orders. See
+# cragb.multimodal.vision_judge.judge_pair. Any disagreement between the two
+# orders is recorded as a tie, never resolved by re-asking or a coin flip --
+# that disagreement rate *is* the position-bias diagnostic T6.6 reports.
+#
 # Provider: Gemini, not Groq. PLAN.md §14.4's live Groq catalog snapshot
 # (2026-08-19, 13 models: gpt-oss-{20b,120b}, qwen3.6-27b, two compound
 # agentic systems, two prompt-guard classifiers, TTS, Whisper) has no
@@ -21,20 +28,32 @@
 # final report, only this file needs to change (cragb.generate.gemini_client
 # has no version pinned in code).
 #
-# Live gotcha worth knowing before T6.4: gemini-3.6-flash spends part of
-# maxOutputTokens on internal "thinking" tokens that never appear in
+# Live gotcha worth knowing (the same class of issue bit T6.2 and T6.4):
+# gemini-3.6-flash spends part
+# of maxOutputTokens on internal "thinking" tokens that never appear in
 # `content` (usageMetadata.thoughtsTokenCount) -- unlike qwen3.6-27b's
 # <think>...</think> (PLAN.md §14.4), which is visible and stripped, this
-# reasoning is fully hidden but still consumes the same token budget. A
-# max_tokens too small for question + thinking + a short JSON verdict
-# silently returns `content: {}` (finishReason=MAX_TOKENS, zero text) --
-# not an error, just an empty candidate GeminiResponseError correctly
-# raises on. 300 was confirmed live to leave enough headroom for a short
-# "OK." reply plus ~50 thinking tokens; T6.4's real judge prompt (a verdict
-# JSON with a <=30-word rationale) should be tested live before trusting
-# this budget, and raised if verdicts start coming back empty.
+# reasoning is fully hidden but still consumes the same token budget. Too
+# small a budget doesn't always fail loudly: a text-only smoke call at
+# max_tokens=300 (T6.2) returned a clean empty candidate
+# (finishReason=MAX_TOKENS, GeminiResponseError correctly raised) -- but
+# T6.4's real multimodal judge prompt at the same 300, live against
+# real photo pairs, instead returned a *partially generated* JSON object
+# cut off mid-string ('"rationale": "Photo A clearly displays the actual
+# purple color of the shoes in real-life lighting, directly helping
+# verify' -- no closing quote/brace), which fails JSON parsing but is NOT
+# an empty candidate, so it slips past the empty-candidate check entirely.
+# 700 was confirmed live (three real judge_pair calls, six total verdicts)
+# to leave enough headroom for the multimodal prompt's thinking + a full
+# <=30-word rationale every time. If verdicts ever start truncating again
+# (a `VisionJudgeParseError` whose raw response looks like valid-but-cut-off
+# JSON, not prose or an empty string), raise this further -- don't assume
+# 700 is a hard ceiling, it's just what T6.4's three test pairs needed.
 
 seed: 42
+
+paths:
+  prompt_template: src/cragb/generate/prompts/vision_judge_v1.md
 
 provider:
   name: gemini
@@ -46,10 +65,21 @@ provider:
   # same pair differently on different runs would defeat T6.6's reliability
   # measurement.
   temperature: 0.0
-  # The verdict JSON is small (winner + confidence + <=30-word rationale);
-  # generous headroom in case a rationale runs long.
-  max_tokens: 300
+  # See the "Live gotcha" note above -- 300 truncated real multimodal judge
+  # calls mid-JSON; 700 was confirmed live to work reliably.
+  max_tokens: 700
   timeout_s: 30
   max_retries: 5
   cache_dir: results/cache/api
   call_log_path: results/cache/api_calls_v1.jsonl
+
+# Reused as-is by cragb.multimodal.vision_judge's CLI to resolve photo ids
+# to bytes -- mirrors configs/multimodal.yaml's photo_store section
+# (duplicated, not cross-loaded, for the same reason that file gives).
+photo_store:
+  photos_dir: data/photos
+  max_bytes: 5000000
+  timeout_s: 20
+  max_retries: 5
+  request_delay_s: 0.2
+  allowed_mime: [image/jpeg, image/png, image/webp]
