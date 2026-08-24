@@ -267,6 +267,106 @@ def summarize_winrate(
     return pd.DataFrame(rows)
 
 
+def plot_winrate(winrate: pd.DataFrame, out_path: str | Path) -> Path:
+    """Report figure #6 (T6.6; PLAN.md §7): surfaced-photo win-rate vs the 0.5 null.
+
+    Reads every plotted number straight from `winrate` (this module's
+    `summarize_winrate` output, i.e. `mm_winrate_v1.csv` reloaded) --
+    nothing here is recomputed, only plotted, so the figure can never
+    silently disagree with the table (M6.md T6.6's own validation
+    requirement).
+
+    Two panels: the pooled ("overall") win-rate as a single bar with its
+    95% bootstrap CI as an error bar, and the same per question-type
+    (`winrate`'s non-"overall" rows). Both panels draw a dashed line at
+    0.5 -- the random-baseline null RQ4/H4 test against. Same `Agg`-backend
+    discipline as `cragb.eval.judge_validation.plot_judge_human_agreement` /
+    `cragb.eval.pareto`'s figures, for the same reason: matplotlib's
+    auto-selected backend has been observed to resolve to a broken `TkAgg`
+    on this project's dev machine.
+
+    Args:
+        winrate: `summarize_winrate`'s output -- must contain a `"overall"`
+            row plus zero or more per-type rows, each with `win_rate`,
+            `ci_lo`, `ci_hi`, `n_pairs`.
+        out_path: where to save the PNG.
+
+    Returns:
+        The resolved path written.
+
+    Raises:
+        ValueError: `winrate` has no `"overall"` row.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    overall_rows = winrate[winrate["group"] == "overall"]
+    if overall_rows.empty:
+        raise ValueError("winrate must contain an 'overall' row")
+    overall = overall_rows.iloc[0]
+    by_type = winrate[winrate["group"] != "overall"].sort_values("group")
+
+    has_by_type = not by_type.empty
+    fig, axes = (
+        plt.subplots(1, 2, figsize=(10, 5), gridspec_kw={"width_ratios": [1, 2]})
+        if has_by_type
+        else plt.subplots(1, 1, figsize=(4, 5))
+    )
+    ax1 = axes[0] if has_by_type else axes
+
+    ax1.bar(["overall"], [overall["win_rate"]], color="tab:blue", width=0.5)
+    ax1.errorbar(
+        ["overall"],
+        [overall["win_rate"]],
+        yerr=[[overall["win_rate"] - overall["ci_lo"]], [overall["ci_hi"] - overall["win_rate"]]],
+        fmt="none",
+        ecolor="black",
+        capsize=6,
+    )
+    ax1.axhline(0.5, linestyle="--", color="gray", linewidth=1, label="random baseline (0.5)")
+    ax1.set_ylim(0, 1)
+    ax1.set_ylabel("surfaced-photo win-rate")
+    ax1.set_title(f"Pooled (n={int(overall['n_pairs'])})")
+    ax1.legend(loc="upper right", fontsize=8)
+
+    if has_by_type:
+        ax2 = axes[1]
+        x = np.arange(len(by_type))
+        ax2.bar(x, by_type["win_rate"], color="tab:blue", width=0.6)
+        ax2.errorbar(
+            x,
+            by_type["win_rate"],
+            yerr=[
+                (by_type["win_rate"] - by_type["ci_lo"]).to_numpy(),
+                (by_type["ci_hi"] - by_type["win_rate"]).to_numpy(),
+            ],
+            fmt="none",
+            ecolor="black",
+            capsize=4,
+        )
+        ax2.axhline(0.5, linestyle="--", color="gray", linewidth=1)
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(
+            [f"{t}\n(n={n})" for t, n in zip(by_type["group"], by_type["n_pairs"])],
+            rotation=30,
+            ha="right",
+            fontsize=8,
+        )
+        ax2.set_ylim(0, 1)
+        ax2.set_title("By question type")
+
+    fig.suptitle("RQ4: does the surfaced photo beat a random control? (T6.5 pilot)")
+    fig.tight_layout()
+
+    resolved = resolve_path(out_path)
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(resolved, dpi=150)
+    plt.close(fig)
+    return resolved
+
+
 # --------------------------------------------------------------------------
 # Cost / latency summary
 # --------------------------------------------------------------------------
@@ -340,6 +440,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--verdicts-out", default="results/tables/mm_verdicts_v1.jsonl")
     parser.add_argument("--winrate-out", default="results/tables/mm_winrate_v1.csv")
     parser.add_argument("--cost-out", default="results/tables/mm_cost_v1.csv")
+    parser.add_argument("--figure-out", default="reports/figures/mm_photo_winrate_v1.png")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging.")
     return parser.parse_args(argv)
@@ -396,6 +497,9 @@ def main(argv: list[str] | None = None) -> int:
     winrate_path.parent.mkdir(parents=True, exist_ok=True)
     winrate.to_csv(winrate_path, index=False)
     logger.info("wrote win-rate table (%d rows) to %s", len(winrate), args.winrate_out)
+
+    figure_path = plot_winrate(winrate, args.figure_out)
+    logger.info("wrote win-rate figure to %s", figure_path)
 
     cost = summarize_cost(recorder.calls, provider_cfg["model"], pricing, t.elapsed_s)
     cost_path = resolve_path(args.cost_out)

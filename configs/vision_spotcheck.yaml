@@ -1,0 +1,18 @@
+# Vision-judge human spot-check configuration (T6.6; PLAN.md §1.4 risk E, §8 G3,
+# M6.md T6.6).
+
+seed: 42
+
+sampling:
+  # T6.5's live run produced 25 usable pairs; n=15 leaves a real sample for
+  # every outcome category (proportional apportionment, not equal -- see
+  # cragb.multimodal.vision_spotcheck._apportion_quotas) even though
+  # control_win only has 3 pairs total.
+  n: 15
+
+paths:
+  verdicts_in: results/tables/mm_verdicts_v1.jsonl
+  pairs_in: results/tables/mm_pairs_v1.jsonl
+  photos_dir: data/photos
+  worksheet_out: reports/vision_spotcheck_worksheet_v1.md
+  spotcheck_out: results/tables/mm_spotcheck_v1.csv

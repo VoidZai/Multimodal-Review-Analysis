@@ -320,7 +320,17 @@ class PhotoStore:
                 logger.info("fetched %d/%d", len(records), n_unique)
         return records
 
-    # -- reading back for T6.2/T6.4 --------------------------------------
+    # -- reading back for T6.2/T6.4/T6.6 -----------------------------------
+
+    def photo_path(self, photo_id_: str) -> Path | None:
+        """Resolved on-disk path to the cached file for `photo_id`, or `None` if
+        not cached.
+
+        For callers that need a human-openable file path rather than bytes
+        (T6.6's spot-check worksheet: photos are referenced by path so a
+        human can open them directly, never re-encoded or re-served).
+        """
+        return self._existing_path(photo_id_)
 
     def load_photo_bytes(self, photo_id_: str) -> bytes:
         """Read the cached bytes for a `photo_id` already fetched successfully.
