@@ -44,3 +44,22 @@ dependencies:
       - torch
       - sentence-transformers
       - faiss-cpu
+      #
+      # Fine-tuning stack (T7.7; PLAN.md §10). Same MAX_PATH reasoning as the
+      # dense-retrieval block above -- installed into `C:\venv\cragb`
+      # (the same short-path venv, not this conda env, and not listed
+      # under this file's own `pip:` section since a fresh `conda env
+      # create -f environment.yml` in the *conda* env deliberately does
+      # NOT pull these in). Versions actually installed there at T7.7
+      # build time, for reproducibility:
+      #   peft==0.20.0  accelerate==1.14.0  bitsandbytes==0.50.1
+      #   datasets==5.0.1  trl==1.10.0
+      # (transformers==5.14.1 and torch==2.6.0+cu124 were already present
+      # from T2.5's dense-retrieval install, per that block's comment.)
+      # `bitsandbytes` shipped official Windows wheels from 0.43 onward,
+      # confirmed live at T7.7 build time: `pip install bitsandbytes` in
+      # the venv resolved a `win_amd64` wheel directly, no MAX_PATH or
+      # build-from-source issue at all -- unlike `sentence-transformers`
+      # above, this one installed cleanly on the first attempt.
+      # To reproduce: `C:\venv\cragb\Scripts\python.exe -m pip install
+      # peft accelerate bitsandbytes datasets trl`.
