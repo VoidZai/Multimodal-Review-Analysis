@@ -1,0 +1,62 @@
+# QLoRA feasibility-probe configuration (T7.9; PLAN.md §10, M7.md T7.9).
+#
+# This file drives cragb.finetune.train_lora as a PROBE only -- it answers "does a
+# training step fit in 4 GB, and how long is an epoch", not "what should the real M8
+# training run use". PLAN.md §10 is explicit about not inventing final hyperparameters
+# before T7.8's failure modes are known; the `placeholder_hyperparameters:` block below
+# exists purely so the probe's own single-example overfit sanity check has *something*
+# to converge with -- every value there is marked to be revisited, not treated as a
+# decision already made.
+
+seed: 42
+
+paths:
+  train_in: data/finetune/train.jsonl
+  # At T7.9 build time, train.jsonl is empty -- T7.3's full 377-context generation
+  # sweep hasn't run yet (M7.md's own task ordering has T7.3 producing the volume;
+  # T7.9 only needs *a* realistic sample of rendered-prompt lengths to calibrate
+  # max_seq_len, not the final dataset). cragb.finetune.train_lora falls back to this
+  # file, logging that it did, whenever train_in has zero examples -- never silently.
+  filtered_pairs_fallback_in: data/finetune/filtered_pairs_v1.jsonl
+  prompt_length_stats_out: results/tables/ft_prompt_length_stats_v1.csv
+  probe_out: results/tables/ft_qlora_probe_v1.csv
+
+# The feasibility grid: cross every model with every rank, at each model's own
+# measured max_seq_len candidates (derived at run time from prompt_length_stats,
+# not listed here -- see cragb.finetune.train_lora.derive_max_seq_len_candidates).
+# Both models are T7.7's shortlist that measured fits=="yes" for *inference*; T7.9
+# exists specifically because a QLoRA *training* step has a categorically heavier
+# VRAM profile (gradients, optimizer state, activation memory) that T7.7's probe
+# never touched.
+sweep:
+  models:
+    - Qwen/Qwen2.5-1.5B-Instruct
+    - Qwen/Qwen2.5-3B-Instruct
+  lora_ranks: [8, 16]
+
+probe:
+  # Micro-steps to run per (model, rank, max_seq_len) configuration -- all repeating
+  # the *same* single training example, per M7.md T7.9's own overfit sanity check.
+  probe_steps: 20
+  # Batch size is fixed at 1 (PLAN.md §10's own words: "Expect batch size 1 +
+  # gradient accumulation" -- not a probe-tunable knob, a hardware necessity at 4 GB).
+  gradient_accumulation_steps: 8
+
+# -----------------------------------------------------------------------------
+# PLACEHOLDER hyperparameters -- SET IN M8 FROM T7.8'S FAILURE MODES, not final values.
+# Nothing below this line should be read as a decision; it exists only so the probe
+# itself has *something* to run with. See T7.10's go/no-go plan for the real values,
+# once T7.8's observed failure modes (over-abstention, PLAN.md §14.7) are known.
+# -----------------------------------------------------------------------------
+placeholder_hyperparameters:
+  # SET IN M8 FROM T7.8'S FAILURE MODES -- 2e-4 is the QLoRA-paper-typical starting
+  # point, used here only so the probe's overfit sanity check converges at all.
+  learning_rate: 2.0e-4
+  # SET IN M8 FROM T7.8'S FAILURE MODES -- the conventional alpha = 2 x rank
+  # heuristic. Does not affect VRAM or step time (a pure forward-pass scaling
+  # factor), only final adapter quality, so it is inert for this probe's purpose.
+  lora_alpha_multiplier: 2
+  lora_dropout: 0.05
+  # SET IN M8 FROM T7.8'S FAILURE MODES -- this file's own epoch-time probe informs
+  # the *time budget* an epoch count implies, not the count itself.
+  num_epochs: 3

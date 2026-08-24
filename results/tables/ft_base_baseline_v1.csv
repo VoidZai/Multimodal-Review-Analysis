@@ -1,0 +1,3 @@
+source,model,n_questions,format_compliance_rate,citation_validity_rate,n_fabricated_citations,fabricated_citation_rate,gold_grounding_rate,abstention_accuracy,self_contradiction_rate,ungrounded_answer_rate,faithfulness_mean,faithfulness_ci_lo,faithfulness_ci_hi,n_latency_questions,median_latency_s
+cragb_60,Qwen/Qwen2.5-3B-Instruct,60.0,0.9833333333333333,1.0,0.0,0.0,0.9518072289156626,0.48333333333333334,0.0,0.016666666666666666,4.583333333333333,4.3,4.85,15,5.731542900088243
+probe,Qwen/Qwen2.5-3B-Instruct,32.0,1.0,1.0,0.0,0.0,,0.4375,0.0,0.0625,4.71875,4.375,5.0,15,2.006019899970852

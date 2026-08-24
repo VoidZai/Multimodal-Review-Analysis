@@ -24,6 +24,9 @@ data/photos/*
 data/finetune/*
 !data/finetune/.gitkeep
 !data/finetune/*manifest*.json
+# The Gebru-style datasheet (T7.10) is hand-written prose, not regenerable data -- commit it
+# like the manifests above, not like the (large, synthetic, regenerable) JSONL files.
+!data/finetune/finetune_data_datasheet.md
 
 # Python
 __pycache__/

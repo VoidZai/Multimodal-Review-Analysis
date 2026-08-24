@@ -319,15 +319,24 @@ Organised by Lec 5's goals, extended with the rigor the JDs expect.
 
 ## SECTION 10 — Fine-tuning plan (decision rules now; hyperparameters after baselines)
 
+> **M7 correction (2026-08-24, §14.7 / `reports/finetune_plan_v1.md`):** this section's "fits
+> 8 GB" assumption was wrong — the real dev machine has **4 GB VRAM**
+> (RTX 3050 Laptop, `nvidia-smi`-confirmed). Measured against the real hardware: Qwen2.5-3B-Instruct
+> *inference* fits at 4-bit with headroom (T7.7), but every QLoRA *training* configuration
+> measured requires partial CPU offload to fit at all (T7.9) — Llama-3.2-3B-Instruct is dropped
+> (gated HF repo, no access requested). The base model, method, and go/no-go rule below are
+> superseded by the fully-worked, numbers-backed version in `reports/finetune_plan_v1.md` — this
+> section is kept as the original a-priori plan for the record, not updated in place.
+
 > I'm deliberately **not** inventing final hyperparameters here. Locking a LoRA config before you know where the baseline fails is false precision. The plan below fixes the *method and the go/no-go*; the exact rank/lr/epochs are set once E5 shows the failure modes.
 
 - **Base model:** small local, 4-bit, fits 8 GB — **Qwen2.5-3B-Instruct** or **Llama-3.2-3B-Instruct** (sanity-check for a newer small model at build time; the choice is stable enough that it won't change the design).
 - **Method:** **QLoRA** (4-bit base + LoRA adapters) — the only realistic route on 8 GB. Expect batch size 1 + gradient accumulation, gradient checkpointing, short max-seq consistent with your retrieved-context length.
 - **Data (from E8):** ~1–5k synthetic *grounded, cited* QA pairs (and correct-abstention examples), **strictly disjoint from CRAGB** (hash-guard), judge-filtered, train/val split.
-- **Target behaviours to improve (hypothesis-led):** citation/format compliance, correct abstention, grounding faithfulness — *not* raw world knowledge (a 3B won't gain facts; it can gain discipline).
+- **Target behaviours to improve (hypothesis-led):** citation/format compliance, correct abstention, grounding faithfulness — *not* raw world knowledge (a 3B won't gain facts; it can gain discipline). **Superseded by T7.8's measured baseline (§14.7): citation/format compliance and faithfulness are already near-ceiling untuned; the real target is severe over-abstention (53–75% false-abstention on answerable questions, 100% true-abstention recall) — see `reports/finetune_plan_v1.md` §4.**
 - **Validation:** track val loss + a small held-out grounded set during training; early stop on val.
 - **Evaluation of the tuned model:** re-run E5/E6 on CRAGB held-out — answer quality, faithfulness, citation validity, **latency** (does it stay fast?), with bootstrap CIs and per-type slices.
-- **Go/no-go (pre-declared):** proceed to full runs only if a pilot LoRA shows ≥ *X* improvement on citation/abstention with no quality regression and no latency blow-up within *T* hours of GPU time; **else trigger the proposal's fallback** — fine-tune the **embedding/retriever** instead (contrastive on CRAGB-style pairs), reusing the same data.
+- **Go/no-go (pre-declared):** proceed to full runs only if a pilot LoRA shows ≥ *X* improvement on citation/abstention with no quality regression and no latency blow-up within *T* hours of GPU time; **else trigger the proposal's fallback** — fine-tune the **embedding/retriever** instead (contrastive on CRAGB-style pairs), reusing the same data. **X and T are now concrete numbers, not placeholders — `reports/finetune_plan_v1.md` §6.**
 - **"Did it actually help?"** Not a single aggregate win — require **per-slice improvement + significance vs the un-tuned baseline on the shared held-out set**, and check it didn't regress OOD questions.
 - **Industry relevance:** "supervised fine-tuning… distillation… for low-latency conversational experiences," "post-training of SLMs where latency and cost demand it" (Applied Scientist JD, verbatim).
 
@@ -578,6 +587,55 @@ subjective task, at a very small sample, not an obviously broken judge. Both the
 and the κ belong in the report exactly as measured; a photo-evidence result with n=25 and
 a validated instrument would look different, and that difference is the honest scope of
 what a pilot at this scale can claim.
+
+### 14.7 — Fine-tuning data prep (M7): the 8 GB assumption was wrong, and the untuned baseline's real failure is over-abstention, not hallucination
+
+**§10's 8 GB assumption corrected with a measured number.** PLAN.md §10 (written before this
+project had touched a GPU) proposed a 3B-class model "fits 8 GB." The actual dev machine is an
+**RTX 3050 Laptop, 4096 MiB VRAM** (`nvidia-smi`, confirmed at T7.7 build time). T7.7's measured
+inference probe (`results/tables/ft_model_probe_v1.csv`) found both Qwen2.5-1.5B-Instruct
+(1.2 GB peak) and Qwen2.5-3B-Instruct (2.1 GB peak) fit comfortably at 4-bit for *inference* —
+the 8 GB-vs-4 GB gap turned out not to bind there. It does bind for **training**: T7.9's QLoRA
+probe (`ft_qlora_probe_v1.csv`) shows every configuration that completed without an outright OOM
+still reports peak VRAM above the card's physical 4,096 MB, meaning every one of them ran partly
+via `bitsandbytes`/`accelerate`'s automatic CPU offload, not purely on-GPU — a second, separate
+correction from the inference-only finding. Full reasoning and the chosen configuration
+(Qwen2.5-1.5B, LoRA rank 16, seq 1,152) are in `reports/finetune_plan_v1.md` §§1–2.
+
+**Two Python environments, cleanly separated.** `peft`, `bitsandbytes`, `accelerate`, `datasets`,
+`trl` were installed into `C:\venv\cragb` only (§14.1's existing MAX_PATH-workaround venv), never
+into the main conda env — matching M7.md fact #2's constraint. `bitsandbytes` installed and
+loaded correctly on Windows without incident (the Windows-wheel risk M7.md flagged as a possible
+finding did not materialise).
+
+**The untuned baseline's real failure, found by decomposing one aggregate metric.** T7.8's
+headline `abstention_accuracy` column reads as mediocre-but-unremarkable (48.3% CRAGB, 43.8%
+probe) until split by *direction* — `results/tables/ft_datasheet_stats_v1.json`'s
+`baseline_abstention_breakdown`, computed from the raw transcripts against each question's
+actual gold label:
+
+```
+CRAGB (58 answerable / 2 gold-abstention):  false-abstention 31/58 = 53.5%   true-abstention recall 2/2 = 100%
+Probe (24 answerable / 8 gold-abstention):  false-abstention 18/24 = 75.0%   true-abstention recall 8/8 = 100%
+```
+
+The untuned `Qwen2.5-3B-Instruct` local model **never once fails to abstain when it should**
+(perfect recall on both slices) — its entire abstention failure is refusing to answer 53–75% of
+questions its own retrieved context could actually answer. Combined with citation validity
+already at 100% and faithfulness already at ~4.6–4.7/5 on the much smaller set of questions it
+does answer, this is not the "hallucinates and drops citations" failure mode a first guess might
+expect from a small local model — it is a **severely over-cautious refusal policy**. This
+reshapes M8's target: the fine-tune's job is to make the model *less* conservative about
+answering, not more careful about grounding (it is already careful). Full baseline table and the
+go/no-go thresholds built from this finding are in `reports/finetune_plan_v1.md` §§4, 6.
+
+**Consequence for abstention evaluation, connecting back to §14.2.** §14.2 already found CRAGB
+retains only 2 genuine abstention questions after 9 of 11 authored negatives turned out
+answerable — too small an n to support any threshold on its own, let alone detect a 53.5%-vs-
+75.0% gap between two evaluation sets the way the probe set (deliberately built with 8 balanced
+abstention examples, T7.6) did here. The probe set's existence is what let this finding surface
+at all; a go/no-go rule written against CRAGB's n=2 alone would have reported "100% recall,
+nothing to fix" and missed the dominant failure entirely.
 
 ---
 

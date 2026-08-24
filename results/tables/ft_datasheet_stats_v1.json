@@ -1,0 +1,422 @@
+{
+  "generated_from": {
+    "contexts_manifest": "data/finetune/contexts_v1_manifest.json",
+    "split_manifest": "data/finetune/split_manifest_v1.json",
+    "filtered_pairs": "data/finetune/filtered_pairs_v1.jsonl",
+    "abstentions": "data/finetune/abstentions_v1.jsonl",
+    "raw_pairs_progress": "data/finetune/raw_pairs_v1_progress.jsonl",
+    "generation_cost": "results/tables/ft_generation_cost_v1.csv",
+    "filter_report": "results/tables/ft_filter_v1.csv",
+    "model_probe": "results/tables/ft_model_probe_v1.csv",
+    "qlora_probe": "results/tables/ft_qlora_probe_v1.csv",
+    "prompt_length_stats": "results/tables/ft_prompt_length_stats_v1.csv",
+    "baseline": "results/tables/ft_base_baseline_v1.csv",
+    "baseline_transcripts": "results/tables/ft_base_baseline_transcripts_v1.jsonl",
+    "cragb_questions": "benchmark/cragb_v1.jsonl",
+    "probe_examples": "data/finetune/probe.jsonl",
+    "finetune_config": "configs/finetune.yaml"
+  },
+  "scale": {
+    "n_contexts_target_full_sweep": 500,
+    "n_contexts_sampled_and_available": 377,
+    "n_contexts_attempted_this_pilot": 10,
+    "pilot_fraction_of_target": 0.02,
+    "n_raw_pairs_pilot": 29,
+    "n_filtered_accepted": 39,
+    "n_abstentions_constructed": 10,
+    "n_train": 0,
+    "n_val": 0,
+    "n_probe": 32
+  },
+  "context_sampling": {
+    "per_category_counts": {
+      "colour_appearance": 67,
+      "defects": 11,
+      "durability": 15,
+      "fabric_quality": 83,
+      "fit_sizing": 100,
+      "occasion": 52,
+      "value": 49
+    },
+    "n_docs_excluded_as_cragb_evidence": 1097,
+    "n_parent_asins_excluded": 1070,
+    "photo_bearing_share": 0.8381962864721485,
+    "category_quota_report": {
+      "fit_sizing": {
+        "target": 100,
+        "actual": 100,
+        "shortfall": 0
+      },
+      "colour_appearance": {
+        "target": 67,
+        "actual": 67,
+        "shortfall": 0
+      },
+      "fabric_quality": {
+        "target": 83,
+        "actual": 83,
+        "shortfall": 0
+      },
+      "durability": {
+        "target": 67,
+        "actual": 15,
+        "shortfall": 52
+      },
+      "defects": {
+        "target": 67,
+        "actual": 11,
+        "shortfall": 56
+      },
+      "occasion": {
+        "target": 67,
+        "actual": 52,
+        "shortfall": 15
+      },
+      "value": {
+        "target": 49,
+        "actual": 49,
+        "shortfall": 0
+      }
+    }
+  },
+  "generation_cost": {
+    "model": "openai/gpt-oss-120b",
+    "n_calls": "10",
+    "n_cache_hits": "0",
+    "total_prompt_tokens": "11907",
+    "total_completion_tokens": "9112",
+    "mean_prompt_tokens": "1190.7",
+    "mean_completion_tokens": "911.2",
+    "total_wall_clock_s": "125.26367499982007",
+    "total_usd": "0.00725325",
+    "n_calls_missing_usage": "0"
+  },
+  "filter_funnel": {
+    "slice": "overall",
+    "n_raw": "39",
+    "n_dropped_citation_invalid": "0",
+    "n_dropped_format": "0",
+    "n_dropped_low_faithfulness": "0",
+    "n_accepted": "39",
+    "judge_n_calls": "29.0",
+    "judge_n_cache_hits": "0.0",
+    "judge_total_prompt_tokens": "31132.0",
+    "judge_total_completion_tokens": "2237.0",
+    "judge_total_usd": "0.0253902"
+  },
+  "filtered_pairs_category_counts": {
+    "fabric_quality": 2,
+    "fit_sizing": 36,
+    "value": 1
+  },
+  "abstention_method_counts": {
+    "categorical_absence": 3,
+    "evidence_stripped": 3,
+    "transplant": 4
+  },
+  "leakage_and_split": {
+    "n_input": 39,
+    "n_dropped_exact_leak": 0,
+    "n_dropped_near_duplicate": 7,
+    "near_duplicate_matches": [
+      {
+        "example_id": "ctx_fit_sizing_0005_00",
+        "cragb_question_id": "fit_sizing_001",
+        "method": "embedding",
+        "score": 0.8085808157920837
+      },
+      {
+        "example_id": "ctx_fit_sizing_0006_00",
+        "cragb_question_id": "fit_sizing_000",
+        "method": "embedding",
+        "score": 0.8047916889190674
+      },
+      {
+        "example_id": "ctx_fit_sizing_0008_01",
+        "cragb_question_id": "fit_sizing_001",
+        "method": "embedding",
+        "score": 0.8174318075180054
+      },
+      {
+        "example_id": "ctx_fit_sizing_0009_00",
+        "cragb_question_id": "fit_sizing_000",
+        "method": "embedding",
+        "score": 0.8473378419876099
+      },
+      {
+        "example_id": "ctx_fit_sizing_0009_01",
+        "cragb_question_id": "fit_sizing_001",
+        "method": "embedding",
+        "score": 0.8044570684432983
+      },
+      {
+        "example_id": "abst_transplant_0001",
+        "cragb_question_id": "fit_sizing_001",
+        "method": "embedding",
+        "score": 0.8085808157920837
+      },
+      {
+        "example_id": "abst_evidence_stripped_0002",
+        "cragb_question_id": "fit_sizing_001",
+        "method": "embedding",
+        "score": 0.8174318075180054
+      }
+    ],
+    "n_kept": 32,
+    "probe": {
+      "n": 32,
+      "n_answerable": 24,
+      "n_abstention": 8,
+      "per_category": {
+        "fabric_quality": 2,
+        "fit_sizing": 29,
+        "value": 1
+      }
+    },
+    "parent_asin_disjointness": {
+      "train_val_overlap": 0,
+      "train_probe_overlap": 0,
+      "val_probe_overlap": 0
+    },
+    "embedding_backstop_used": true,
+    "config": {
+      "val_fraction": 0.1,
+      "probe_answerable_count": 40,
+      "probe_abstention_count": 40,
+      "near_duplicate_threshold": 0.85,
+      "embedding_similarity_threshold": 0.8,
+      "embedding_model": "BAAI/bge-small-en-v1.5"
+    }
+  },
+  "model_probe": [
+    {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "load_peak_vram_mb": "1125.0908203125",
+      "resident_vram_mb": "1099.9287109375",
+      "generation_peak_vram_mb": "1217.04443359375",
+      "tokens_per_second": "12.266396687104333",
+      "fits": "yes",
+      "error": ""
+    },
+    {
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "load_peak_vram_mb": "2013.3193359375",
+      "resident_vram_mb": "1970.734375",
+      "generation_peak_vram_mb": "2126.0380859375",
+      "tokens_per_second": "9.752652651993774",
+      "fits": "yes",
+      "error": ""
+    },
+    {
+      "model": "meta-llama/Llama-3.2-3B-Instruct",
+      "load_peak_vram_mb": "",
+      "resident_vram_mb": "",
+      "generation_peak_vram_mb": "",
+      "tokens_per_second": "",
+      "fits": "no",
+      "error": "You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct.\n401 Client Error. (Request ID: Root=1-6a8c98c8-6f35845962f0311163c77e8c;70ce08e4-dce9-46a1-afff-7f94ec7ca067)\n\nCannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct/resolve/main/config.json.\nAccess to model meta-llama/Llama-3.2-3B-Instruct is restricted. You must have access to it and be authenticated to access it. Please log in."
+    }
+  ],
+  "qlora_probe": [
+    {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "rank": "8",
+      "max_seq_len": "1152",
+      "peak_vram_mb": "4409.189453125",
+      "seconds_per_step": "47.98111204739268",
+      "oom": "False",
+      "initial_loss": "0.0837780311703682",
+      "final_loss": "1.778708065103274e-05",
+      "overfit_confirmed": "True",
+      "n_train_examples": "39",
+      "extrapolated_minutes_per_epoch": "31.18772283080524",
+      "error": ""
+    },
+    {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "rank": "8",
+      "max_seq_len": "1280",
+      "peak_vram_mb": "5319.88330078125",
+      "seconds_per_step": "11.602000815787745",
+      "oom": "False",
+      "initial_loss": "2.3195266723632812",
+      "final_loss": "1.255845069885254",
+      "overfit_confirmed": "False",
+      "n_train_examples": "39",
+      "extrapolated_minutes_per_epoch": "7.541300530262035",
+      "error": ""
+    },
+    {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "rank": "16",
+      "max_seq_len": "1152",
+      "peak_vram_mb": "5130.24609375",
+      "seconds_per_step": "4.913391205261608",
+      "oom": "False",
+      "initial_loss": "0.0837780311703682",
+      "final_loss": "1.1946189260925166e-05",
+      "overfit_confirmed": "True",
+      "n_train_examples": "39",
+      "extrapolated_minutes_per_epoch": "3.1937042834200455",
+      "error": ""
+    },
+    {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "rank": "16",
+      "max_seq_len": "1280",
+      "peak_vram_mb": "5386.27392578125",
+      "seconds_per_step": "5.811343436846265",
+      "oom": "False",
+      "initial_loss": "2.3195266723632812",
+      "final_loss": "0.910632312297821",
+      "overfit_confirmed": "False",
+      "n_train_examples": "39",
+      "extrapolated_minutes_per_epoch": "3.777373233950072",
+      "error": ""
+    },
+    {
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "rank": "8",
+      "max_seq_len": "1152",
+      "peak_vram_mb": "6235.83203125",
+      "seconds_per_step": "29.599447936824475",
+      "oom": "False",
+      "initial_loss": "0.000832709192764014",
+      "final_loss": "7.12672044755891e-06",
+      "overfit_confirmed": "True",
+      "n_train_examples": "39",
+      "extrapolated_minutes_per_epoch": "19.23964115893591",
+      "error": ""
+    },
+    {
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "rank": "8",
+      "max_seq_len": "1280",
+      "peak_vram_mb": "",
+      "seconds_per_step": "",
+      "oom": "False",
+      "initial_loss": "",
+      "final_loss": "",
+      "overfit_confirmed": "",
+      "n_train_examples": "39",
+      "extrapolated_minutes_per_epoch": "",
+      "error": "Some modules are dispatched on the CPU or the disk. Make sure you have enough GPU RAM to fit the quantized model. If you want to dispatch the model on the CPU or the disk while keeping these modules in 32-bit, you need to set `llm_int8_enable_fp32_cpu_offload=True` and pass a custom `device_map` to `from_pretrained`. Check https://huggingface.co/docs/transformers/main/en/main_classes/quantization#offload-between-cpu-and-gpu for more details. "
+    },
+    {
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "rank": "16",
+      "max_seq_len": "1152",
+      "peak_vram_mb": "5714.6171875",
+      "seconds_per_step": "10.701837526297345",
+      "oom": "False",
+      "initial_loss": "0.000832709192764014",
+      "final_loss": "7.101161372702336e-06",
+      "overfit_confirmed": "True",
+      "n_train_examples": "39",
+      "extrapolated_minutes_per_epoch": "6.956194392093274",
+      "error": ""
+    },
+    {
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "rank": "16",
+      "max_seq_len": "1280",
+      "peak_vram_mb": "",
+      "seconds_per_step": "",
+      "oom": "False",
+      "initial_loss": "",
+      "final_loss": "",
+      "overfit_confirmed": "",
+      "n_train_examples": "39",
+      "extrapolated_minutes_per_epoch": "",
+      "error": "Some modules are dispatched on the CPU or the disk. Make sure you have enough GPU RAM to fit the quantized model. If you want to dispatch the model on the CPU or the disk while keeping these modules in 32-bit, you need to set `llm_int8_enable_fp32_cpu_offload=True` and pass a custom `device_map` to `from_pretrained`. Check https://huggingface.co/docs/transformers/main/en/main_classes/quantization#offload-between-cpu-and-gpu for more details. "
+    }
+  ],
+  "qlora_best_fitting_config": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "rank": "16",
+    "max_seq_len": "1152",
+    "peak_vram_mb": "5130.24609375",
+    "seconds_per_step": "4.913391205261608",
+    "oom": "False",
+    "initial_loss": "0.0837780311703682",
+    "final_loss": "1.1946189260925166e-05",
+    "overfit_confirmed": "True",
+    "n_train_examples": "39",
+    "extrapolated_minutes_per_epoch": "3.1937042834200455",
+    "error": ""
+  },
+  "prompt_length_stats": [
+    {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "source": "filtered_pairs_fallback",
+      "n": "39",
+      "p50": "891",
+      "p95": "1117",
+      "max": "1210"
+    },
+    {
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "source": "filtered_pairs_fallback",
+      "n": "39",
+      "p50": "891",
+      "p95": "1117",
+      "max": "1210"
+    }
+  ],
+  "baseline_cragb_60": {
+    "source": "cragb_60",
+    "model": "Qwen/Qwen2.5-3B-Instruct",
+    "n_questions": "60.0",
+    "format_compliance_rate": "0.9833333333333333",
+    "citation_validity_rate": "1.0",
+    "n_fabricated_citations": "0.0",
+    "fabricated_citation_rate": "0.0",
+    "gold_grounding_rate": "0.9518072289156626",
+    "abstention_accuracy": "0.48333333333333334",
+    "self_contradiction_rate": "0.0",
+    "ungrounded_answer_rate": "0.016666666666666666",
+    "faithfulness_mean": "4.583333333333333",
+    "faithfulness_ci_lo": "4.3",
+    "faithfulness_ci_hi": "4.85",
+    "n_latency_questions": "15",
+    "median_latency_s": "5.731542900088243"
+  },
+  "baseline_probe": {
+    "source": "probe",
+    "model": "Qwen/Qwen2.5-3B-Instruct",
+    "n_questions": "32.0",
+    "format_compliance_rate": "1.0",
+    "citation_validity_rate": "1.0",
+    "n_fabricated_citations": "0.0",
+    "fabricated_citation_rate": "0.0",
+    "gold_grounding_rate": "",
+    "abstention_accuracy": "0.4375",
+    "self_contradiction_rate": "0.0",
+    "ungrounded_answer_rate": "0.0625",
+    "faithfulness_mean": "4.71875",
+    "faithfulness_ci_lo": "4.375",
+    "faithfulness_ci_hi": "5.0",
+    "n_latency_questions": "15",
+    "median_latency_s": "2.006019899970852"
+  },
+  "baseline_abstention_breakdown": {
+    "cragb_60": {
+      "n_total": 60,
+      "n_answerable": 58,
+      "n_false_abstention_on_answerable": 31,
+      "false_abstention_rate": 0.5345,
+      "n_gold_abstention": 2,
+      "n_missed_true_abstention": 0,
+      "true_abstention_recall": 1.0
+    },
+    "probe": {
+      "n_total": 32,
+      "n_answerable": 24,
+      "n_false_abstention_on_answerable": 18,
+      "false_abstention_rate": 0.75,
+      "n_gold_abstention": 8,
+      "n_missed_true_abstention": 0,
+      "true_abstention_recall": 1.0
+    }
+  }
+}

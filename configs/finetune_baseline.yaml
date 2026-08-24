@@ -1,0 +1,75 @@
+# Untuned local base-model baseline configuration (T7.8; PLAN.md §3 E8, §10, M7.md T7.8).
+#
+# The whole point of this config is that its `retrieval:` block is a byte-for-byte copy
+# of configs/grounded_qa.yaml's -- same corpus, same chunking scheme, same k -- so the
+# *only* variable between this baseline and the RQ0/RQ1 RAG-small arm is the generator
+# (T7.7's local model here, openai/gpt-oss-20b there). `cragb.finetune.baseline_eval`
+# asserts this equality holds at runtime (retrieved doc ids must match
+# answer_gen_rag_small_v1.jsonl's, question for question) rather than just trusting this
+# file was copied correctly.
+
+seed: 42
+
+paths:
+  corpus_in: data/processed/corpus_v1.parquet
+  chunking_config: configs/chunking.yaml
+  cragb_questions_in: benchmark/cragb_v1.jsonl
+  cragb_references_in: benchmark/reference_answers_v1.jsonl
+  # T5.5's canonical RAG-small transcripts -- the retrieval-parity check's ground truth.
+  rag_small_transcripts_in: results/tables/answer_gen_rag_small_v1.jsonl
+  probe_in: data/finetune/probe.jsonl
+  grounded_qa_prompt_template: src/cragb/generate/prompts/grounded_qa_v1.md
+  judge_prompt_template: src/cragb/generate/prompts/answer_judge_v1.md
+  # Local-model calls share the project-wide disk cache (same convention as every other
+  # provider client); judge calls do too, keyed separately by their own payload shape.
+  cache_dir: results/cache/api
+  baseline_out: results/tables/ft_base_baseline_v1.csv
+  transcripts_out: results/tables/ft_base_baseline_transcripts_v1.jsonl
+
+retrieval:
+  # Identical to configs/grounded_qa.yaml's retrieval block -- see module comment above.
+  retriever: bm25
+  k: 5
+
+# T7.7's local model. `model` is deliberately hardcoded to the winner of
+# results/tables/ft_model_probe_v1.csv rather than re-read from that CSV at run time:
+# T7.8 is evaluating *one specific, named* base model, not "whichever model the probe
+# happens to prefer if re-run" -- a future probe re-run (e.g. after a driver update)
+# must not silently change which model this baseline claims to measure.
+provider:
+  model: Qwen/Qwen2.5-3B-Instruct
+  device: null  # null = auto-detect CUDA, matching cragb.finetune.local_client.LocalHFClient
+  # Matches configs/grounded_qa.yaml's temperature/max_tokens exactly -- again, the point
+  # is that the generator is the only thing that differs from RAG-small.
+  temperature: 0.2
+  max_tokens: 1200
+  load_in_4bit: true
+
+# The same validated judge every other M4b/T7.5 faithfulness score comes from
+# (configs/judge.yaml, qwen/qwen3.6-27b) -- copied here rather than read from that file
+# so this config is self-contained, and because a distinct-family judge is what keeps
+# this score comparable to the RQ0/RQ1 numbers in the first place.
+judge:
+  provider:
+    name: groq
+    model: qwen/qwen3.6-27b
+    api_base: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    temperature: 0.0
+    max_tokens: 500
+    reasoning_effort: "none"
+    timeout_s: 30
+    max_retries: 5
+
+# Generation latency is measured on a stratified subset, not all 60+probe questions --
+# a local 4-bit forward pass is orders of magnitude slower per call than a Groq API call
+# (T7.7's live check: ~87s for one 859-prompt-token CRAGB question), so timing every
+# question the way T5.5 could for Groq is not a reasonable use of wall-clock time here.
+# 15 mirrors T5.5's own DEFAULT_N_QUESTIONS default for the identical reason.
+latency:
+  n_cragb_questions: 15
+  n_probe_questions: 15
+
+bootstrap:
+  n_boot: 10000
+  alpha: 0.05
